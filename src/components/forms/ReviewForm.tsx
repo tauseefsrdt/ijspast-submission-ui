@@ -55,9 +55,10 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   isLoading = false,
 }) => {
   const isStage1 = stage === 1;
+  const isRound2 = stage === 3 || Boolean(isRoundTwo);
 
   const [recommendation, setRecommendation] = useState<ReviewRecommendation>(
-    isStage1 ? 'Minor Revision' : isRoundTwo ? 'Accept' : 'Accept'
+    isStage1 ? 'Minor Revision' : isRound2 ? 'Accept' : 'Accept'
   );
 
   // 11 criteria scores (1 - 5)
@@ -68,13 +69,17 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   );
 
   const [commentsForAuthor, setCommentsForAuthor] = useState(
-    isStage1
+    isRound2
+      ? 'Second-Round Re-evaluation:\nThe revised manuscript successfully incorporates all requested corrections. The added benchmark comparisons and revised error statistics adequately resolve our prior concerns. The manuscript is recommended for publication.'
+      : isStage1
       ? '1. Scope & Novelty: The submission addresses a relevant topic with strong potential. Please expand the literature review to include recent benchmark algorithms from 2024-2025.\n2. Methodology: Clarify the calibration error bounds and sensor drift compensations in Section 3.\n3. Visual Presentation: Enhance the resolution and font legibility of Figure 4.'
       : 'Comprehensive Final Evaluation:\nThe authors have rigorously addressed all technical questions. The theoretical foundations are solid, experimental validations are robust, and statistical error analyses are verified. Recommended for publication.'
   );
 
   const [commentsForEditor, setCommentsForEditor] = useState(
-    isStage1
+    isRound2
+      ? 'Round 2 Re-evaluation: Author revisions are satisfactory and address all reviewer directives. The paper meets IJSPAST publication standards and is recommended for acceptance.'
+      : isStage1
       ? 'Stage 1 Preliminary Assessment: The paper falls squarely within IJSPAST aims and scope. The work is technically sound, but warrants minor revision on experimental calibration before final acceptance.'
       : 'Stage 2 Final Evaluation: Solid scientific contribution ready for formal acceptance. The revisions and author explanations are thorough and convincing.'
   );
@@ -122,9 +127,11 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     const originality = Math.round((scores[1] + scores[2]) / 2);
     const clarity = Math.round((scores[7] + scores[9]) / 2);
 
-    const stageTitle = isStage1
-      ? 'Stage 1: Initial Assessment'
-      : 'Stage 2: Final Evaluation';
+    const stageTitle = isRound2
+      ? 'Round 2: Revision Re-evaluation'
+      : (isStage1
+        ? 'Stage 1: Initial Assessment'
+        : 'Stage 2: Final Evaluation');
 
     onSubmit({
       manuscriptId,
@@ -155,22 +162,34 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
             </span>
             <span
               className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
-                isStage1
+                isRound2
+                  ? 'bg-amber-50 text-amber-800 border-amber-200'
+                  : isStage1
                   ? 'bg-blue-50 text-blue-800 border-blue-200'
                   : 'bg-emerald-50 text-emerald-800 border-emerald-200'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>{isStage1 ? 'Stage 1 of 2: Initial Assessment' : 'Stage 2 of 2: Comprehensive Final Evaluation'}</span>
+              <span>
+                {isRound2
+                  ? 'Round 2: Revision Re-evaluation'
+                  : isStage1
+                  ? 'Stage 1 of 2: Initial Assessment'
+                  : 'Stage 2 of 2: Comprehensive Final Evaluation'}
+              </span>
             </span>
           </div>
           <h2 className="text-lg font-bold text-slate-900 mt-2">
-            {isStage1
+            {isRound2
+              ? 'Second-Round Review: Re-evaluation of Revised Manuscript'
+              : isStage1
               ? 'Stage 1: Preliminary Technical & Scope Assessment'
               : 'Stage 2: Comprehensive Final Evaluation Scorecard'}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            {isStage1
+            {isRound2
+              ? 'Evaluate how thoroughly the authors addressed prior reviewer feedback and provide your second-round verdict.'
+              : isStage1
               ? 'Step 1: Evaluate novelty, scope alignment, and core methodology to provide initial feedback to the Editor.'
               : 'Step 2: Provide thorough in-depth scorecard ratings, detailed section-by-section remarks, and final verdict.'}
           </p>
@@ -338,7 +357,9 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       {/* Submit Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
         <span className="text-[11px] text-slate-500 italic">
-          {isStage1
+          {isRound2
+            ? 'Submitting Second-Round Review will conclude your re-evaluation and send your formal report to the Editor.'
+            : isStage1
             ? 'Submitting Stage 1 will log your initial assessment with the Editor and unlock Stage 2 Final Evaluation.'
             : 'Submitting Stage 2 will conclude your peer review and notify the Editor.'}
         </span>
@@ -351,6 +372,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
           <span>
             {isLoading
               ? 'Submitting to Editor...'
+              : isRound2
+              ? 'Submit Second-Round Review to Editor'
               : isStage1
               ? 'Submit Stage 1 Preliminary Review to Editor'
               : 'Submit Stage 2 Final Evaluation to Editor'}

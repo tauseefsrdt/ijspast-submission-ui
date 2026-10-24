@@ -22,6 +22,7 @@ import {
   Layers,
   ArrowRight,
   Clock,
+  Lock,
 } from 'lucide-react';
 
 export const ReviewerManuscriptDetails: React.FC = () => {
@@ -35,7 +36,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
   const manuscript = manuscripts.find((m) => m.id === id);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeStageForm, setActiveStageForm] = useState<1 | 2 | null>(null);
+  const [activeStageForm, setActiveStageForm] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -70,9 +71,17 @@ export const ReviewerManuscriptDetails: React.FC = () => {
 
   const stage1Report = myReports.find((r) => r.stage === 1 || (!r.stage && myReports.length === 1));
   const stage2Report = myReports.find((r) => r.stage === 2);
+  const round2Report = myReports.find(
+    (r) => r.stage === 3 || (r as any).round === 2 || r.stageName?.toLowerCase().includes('round 2')
+  );
 
+  const hasRevisions =
+    manuscript.status === 'Revision Submitted' ||
+    (manuscript.revisedFiles && manuscript.revisedFiles.length > 0) ||
+    Boolean(manuscript.authorRevisionResponse);
   const isRevisionSubmitted = manuscript.status === 'Revision Submitted';
   const isRevisionForwarded = Boolean(manuscript.revisionForwardedToReviewer);
+  const isSecondRound = hasRevisions || isRevisionForwarded;
 
   const handleReviewSubmit = async (reportData: {
     manuscriptId: string;
@@ -202,14 +211,26 @@ export const ReviewerManuscriptDetails: React.FC = () => {
           <div className="flex items-center gap-2">
             <span
               className={`text-xs font-bold px-3 py-1 rounded-full border ${
-                stage1Report && stage2Report
+                isSecondRound
+                  ? round2Report
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    : isRevisionForwarded
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-slate-100 text-slate-700 border-slate-300'
+                  : stage1Report && stage2Report
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
                   : stage1Report
                   ? 'bg-amber-50 text-amber-800 border-amber-200'
                   : 'bg-blue-50 text-blue-800 border-blue-200'
               }`}
             >
-              {stage1Report && stage2Report
+              {isSecondRound
+                ? round2Report
+                  ? 'Second-Round Review Completed'
+                  : isRevisionForwarded
+                  ? 'Second-Round Feedback Enabled (Action Required)'
+                  : 'Second-Round Feedback Disabled (Awaiting Editor Action)'
+                : stage1Report && stage2Report
                 ? 'Both Stages Completed (2/2)'
                 : stage1Report
                 ? 'Stage 1 Completed • Stage 2 Pending (1/2)'
@@ -332,52 +353,172 @@ export const ReviewerManuscriptDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Author Revision Rebuttal banner or Editorial Assessment notice */}
-      {isRevisionSubmitted && !isRevisionForwarded && (
-        <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-6 shadow-xs space-y-3">
-          <div className="flex items-center justify-between border-b border-blue-200 pb-3">
-            <div className="flex items-center gap-2 text-blue-950 font-bold text-sm">
-              <Clock className="w-4 h-4 text-blue-700" />
-              <span>Author Resubmission Under Editorial Assessment</span>
+      {/* SECOND-ROUND REVIEW SECTION (Requirement 2) */}
+      {isSecondRound && !isRevisionForwarded && (
+        <div className="bg-slate-50 border-2 border-slate-300 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="p-2 bg-slate-200 text-slate-700 rounded-xl">
+                <Lock className="w-5 h-5 text-slate-600" />
+              </span>
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Second-Round Review: Re-evaluation of Revised Manuscript
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Author resubmission is currently undergoing editorial verification.
+                </p>
+              </div>
             </div>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-              Pending Editor Verification
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-slate-200 text-slate-700 border border-slate-300 w-fit">
+              <Lock className="w-3.5 h-3.5 text-slate-600" />
+              <span>Second-Round Feedback Disabled (Locked)</span>
             </span>
           </div>
-          <p className="text-xs text-blue-900 leading-relaxed">
-            The author has submitted a revised manuscript following editorial revision requests. The resubmitted paper is currently undergoing preliminary editorial assessment by the Editor-in-Chief. Once verified, the Editor will explicitly forward the updated manuscript and rebuttal notes to you for formal re-evaluation.
-          </p>
+
+          <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-xl space-y-2 text-xs text-amber-950">
+            <div className="font-bold flex items-center gap-1.5 text-amber-900">
+              <Clock className="w-4 h-4 text-amber-700" />
+              <span>Awaiting Editor Action: "Forward Revisions to Reviewers"</span>
+            </div>
+            <p className="leading-relaxed">
+              The author has submitted a revised manuscript following editorial revision requests. In accordance with journal protocol, second-round feedback remains disabled for both assigned reviewers until the Editor-in-Chief verifies the submission and clicks <strong>"Forward Revisions to Reviewers"</strong>.
+            </p>
+          </div>
+
+          <div className="pt-2 flex justify-end">
+            <button
+              type="button"
+              disabled
+              className="px-5 py-2.5 bg-slate-200 text-slate-400 font-bold text-xs rounded-xl cursor-not-allowed flex items-center gap-2 opacity-70"
+              title="Second-round feedback is disabled until the Editor forwards revisions"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Second-Round Feedback Disabled (Awaiting Editor Forwarding)</span>
+            </button>
+          </div>
         </div>
       )}
 
-      {isRevisionForwarded && (
-        <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-amber-200 pb-3">
-            <div className="flex items-center gap-2 text-amber-950 font-bold text-sm">
-              <RotateCcw className="w-4 h-4 text-amber-700" />
-              <span>Author Revised Manuscript &amp; Rebuttal (Forwarded by Editor)</span>
+      {isSecondRound && isRevisionForwarded && (
+        <div className="bg-gradient-to-r from-amber-50/60 to-orange-50/40 border-2 border-amber-300 rounded-2xl p-6 shadow-xs space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200 pb-3">
+            <div className="flex items-center gap-2">
+              <span className="p-2 bg-amber-600 text-white rounded-xl">
+                <RotateCcw className="w-5 h-5 text-white" />
+              </span>
+              <div>
+                <h3 className="text-base font-bold text-amber-950">
+                  Second-Round Review: Re-evaluation of Revised Manuscript
+                </h3>
+                <p className="text-xs text-amber-800">
+                  Author revised paper forwarded by Editor • Second-round feedback enabled for both reviewers.
+                </p>
+              </div>
             </div>
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-200/60 text-amber-900">
-              Ready for Re-evaluation
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 w-fit">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Second-Round Feedback Enabled (Active)</span>
             </span>
           </div>
 
           {manuscript.authorRevisionResponse && (
             <div className="space-y-1.5 text-xs">
-              <span className="font-bold text-amber-900 block flex items-center gap-1.5">
+              <span className="font-bold text-amber-950 block flex items-center gap-1.5">
                 <MessageSquare className="w-3.5 h-3.5 text-amber-700" />
-                <span>Author's Response to Reviewer Feedback:</span>
+                <span>Author Point-by-Point Rebuttal / Revision Notes:</span>
               </span>
               <div className="p-4 bg-white border border-amber-200 rounded-xl text-slate-800 whitespace-pre-wrap leading-relaxed font-sans shadow-xs">
                 {manuscript.authorRevisionResponse}
               </div>
             </div>
           )}
+
+          {/* Action to submit or view round 2 report */}
+          {round2Report ? (
+            <div className="p-5 bg-white border border-emerald-200 rounded-xl space-y-3 text-xs shadow-xs">
+              <div className="flex items-center justify-between border-b border-emerald-100 pb-2.5">
+                <span className="font-bold text-emerald-900 flex items-center gap-1.5 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Second-Round Evaluation Submitted</span>
+                </span>
+                <span className="font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  Round 2 Verdict: {round2Report.recommendation}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Technical Rigor</span>
+                  <span className="font-bold text-slate-900">{round2Report.technicalQuality || '—'} / 5</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Originality</span>
+                  <span className="font-bold text-slate-900">{round2Report.originality || '—'} / 5</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Clarity</span>
+                  <span className="font-bold text-slate-900">{round2Report.clarity || '—'} / 5</span>
+                </div>
+              </div>
+              {round2Report.commentsForAuthor && (
+                <div className="pt-1 space-y-1">
+                  <span className="text-slate-700 font-bold block">Round 2 Comments for Author:</span>
+                  <p className="text-slate-800 whitespace-pre-wrap leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">{round2Report.commentsForAuthor}</p>
+                </div>
+              )}
+              {round2Report.commentsForEditor && (
+                <div className="pt-1 space-y-1">
+                  <span className="text-slate-700 font-bold block">Round 2 Confidential Comments for Editor:</span>
+                  <p className="text-slate-800 whitespace-pre-wrap leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100">{round2Report.commentsForEditor}</p>
+                </div>
+              )}
+            </div>
+          ) : activeStageForm === 3 ? (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-slate-900">
+                  Entering Second-Round Review Scorecard &amp; Feedback
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setActiveStageForm(null)}
+                  className="px-3 py-1 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold cursor-pointer"
+                >
+                  Close Form
+                </button>
+              </div>
+              <ReviewForm
+                manuscriptId={manuscript.id}
+                manuscriptTitle={manuscript.title}
+                reviewerId={user?.id || 'reviewer'}
+                reviewerName={user?.name || 'Peer Reviewer'}
+                stage={3}
+                isRoundTwo={true}
+                authorReplyText={manuscript.authorRevisionResponse}
+                onSubmit={handleReviewSubmit}
+                isLoading={isSubmitting}
+              />
+            </div>
+          ) : (
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/80 p-4 rounded-xl border border-amber-200">
+              <span className="text-xs text-amber-900 font-medium">
+                Please re-evaluate the updated manuscript and author rebuttal to formulate your second-round feedback.
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveStageForm(3)}
+                className="px-6 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>Submit Second-Round Feedback</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Render Active Review Form if chosen */}
-      {activeStageForm ? (
+      {/* Render Active Review Form for Stage 1 or Stage 2 if chosen */}
+      {activeStageForm && activeStageForm !== 3 ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-slate-900">
@@ -510,7 +651,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
       )}
 
       {/* If Neither Form is Active and Stage 1 Not Yet Submitted */}
-      {!stage1Report && !activeStageForm && (
+      {!stage1Report && !activeStageForm && !isSecondRound && (
         <ReviewForm
           manuscriptId={manuscript.id}
           manuscriptTitle={manuscript.title}
@@ -525,7 +666,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
       )}
 
       {/* If Stage 1 is Submitted but Stage 2 is not and form not open */}
-      {stage1Report && !stage2Report && !activeStageForm && (
+      {stage1Report && !stage2Report && !activeStageForm && !isSecondRound && (
         <div className="p-8 text-center bg-white border border-indigo-200 rounded-2xl space-y-4 shadow-xs">
           <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 mx-auto">
             <Sparkles className="w-6 h-6" />

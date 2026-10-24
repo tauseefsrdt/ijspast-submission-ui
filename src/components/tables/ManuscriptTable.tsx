@@ -43,7 +43,7 @@ export const ManuscriptTable: React.FC<ManuscriptTableProps> = ({
         const q = searchQuery.toLowerCase();
         const matchId = m.id.toLowerCase().includes(q);
         const matchTitle = m.title.toLowerCase().includes(q);
-        const matchAuthor = m.author.name.toLowerCase().includes(q);
+        const matchAuthor = m.author?.name ? m.author.name.toLowerCase().includes(q) : false;
         const matchDomain = m.domain.toLowerCase().includes(q);
         return matchId || matchTitle || matchAuthor || matchDomain;
       }

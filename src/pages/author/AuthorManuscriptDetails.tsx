@@ -407,9 +407,34 @@ export const AuthorManuscriptDetails: React.FC = () => {
       {/* Tab 4: History Trail */}
       {activeTab === 'history' && (
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-          <h3 className="text-sm font-bold text-slate-900">Submission Workflow Event History</h3>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Submission Workflow Event History</h3>
+              <p className="text-[11px] text-slate-500">Official lifecycle events and milestone audit log.</p>
+            </div>
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+              Double-Blind Protected
+            </span>
+          </div>
           <div className="space-y-3">
-            {manuscript.history
+            {(manuscript.history || [])
+              .filter((evt) => {
+                const role = (evt.role || '').toLowerCase();
+                const actor = (evt.actor || '').toLowerCase();
+                const comment = (evt.comment || '').toLowerCase();
+                // Requirement 1: Hide all reviewer-related information from Author's status history
+                if (role === 'reviewer') return false;
+                if (actor.includes('reviewer')) return false;
+                if (comment.includes('submitted to editor by') && role !== 'author') return false;
+                return true;
+              })
+              .map((evt) => {
+                let sanitized = evt.comment || '';
+                if (/Assigned to Reviewer/i.test(sanitized)) {
+                  sanitized = sanitized.replace(/Assigned to Reviewer.*?for/i, 'Assigned for');
+                }
+                return { ...evt, comment: sanitized };
+              })
               .slice()
               .reverse()
               .map((evt) => (

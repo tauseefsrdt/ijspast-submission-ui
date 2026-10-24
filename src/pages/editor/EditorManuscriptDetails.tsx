@@ -337,7 +337,7 @@ export const EditorManuscriptDetails: React.FC = () => {
                 className="px-4 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Forward Revision to Reviewer(s)</span>
+                <span>Forward Revisions to Reviewers</span>
               </button>
             )}
 
@@ -813,11 +813,11 @@ export const EditorManuscriptDetails: React.FC = () => {
         onAssign={handleAssignReviewer}
       />
 
-      {/* MODAL: Forward Revision to Reviewers (Requirement 2) */}
+      {/* MODAL: Forward Revisions to Reviewers (Requirement 2) */}
       <Modal
         isOpen={isForwardModalOpen}
         onClose={() => setIsForwardModalOpen(false)}
-        title="Forward Resubmitted Paper to Reviewers (Round 2)"
+        title="Forward Revisions to Reviewers (Round 2)"
         subtitle={`Manuscript ID: ${manuscript.id} • ${manuscript.title}`}
         size="lg"
       >
@@ -904,7 +904,7 @@ export const EditorManuscriptDetails: React.FC = () => {
               className="px-5 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               <Send className="w-4 h-4" />
-              <span>{isForwarding ? 'Forwarding...' : 'Dispatch Revision to Reviewers'}</span>
+              <span>{isForwarding ? 'Forwarding...' : 'Forward Revisions to Reviewers'}</span>
             </button>
           </div>
         </div>

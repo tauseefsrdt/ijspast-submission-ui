@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg: #f3f6fb;
+    --surface: #ffffff;
+    --surface2: #eaf0f8;
+    --fg: #14233a;
+    --muted: #55657d;
+    --line: #d5deeb;
+    --navy: #0d3b6e;
+    --navy2: #0a2d54;
+    --navy-fg: #ffffff;
+    --gold: #f2b01e;
+    --gold-fg: #1d1600;
+    --primary: #0d3b6e;
+    --primary-fg: #ffffff;
+    --link: #0b5cad;
+    --ok: #13663c;
+    --okbg: #e1f4e9;
+    --warn: #7d5200;
+    --warnbg: #fff0cc;
+    --bad: #a8231b;
+    --badbg: #fde3e0;
+    --info: #1a5a9f;
+    --infobg: #e0ecfa;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--fg);
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  .mono {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+}

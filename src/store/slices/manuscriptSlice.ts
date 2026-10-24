@@ -36,9 +36,10 @@ const initialState: ManuscriptState = {
 // Fetch manuscripts for editor
 export const fetchManuscripts = createAsyncThunk(
   'manuscripts/fetchEditorAll',
-  async (params: { status?: string; domain?: string; search?: string } = {}, { rejectWithValue }) => {
+  async (params: { status?: string; domain?: string; search?: string } | void, { rejectWithValue }) => {
     try {
-      return await manuscriptService.getEditorManuscripts(params.status, params.domain, params.search);
+      const p = params || {};
+      return await manuscriptService.getEditorManuscripts(p.status, p.domain, p.search);
     } catch (e: any) {
       return rejectWithValue(e.message || 'Failed to fetch editor manuscripts');
     }
@@ -48,9 +49,10 @@ export const fetchManuscripts = createAsyncThunk(
 // Fetch manuscripts for author
 export const fetchAuthorManuscripts = createAsyncThunk(
   'manuscripts/fetchAuthorAll',
-  async (params: { status?: string; search?: string } = {}, { rejectWithValue }) => {
+  async (params: { status?: string; search?: string } | void, { rejectWithValue }) => {
     try {
-      return await manuscriptService.getAuthorManuscripts(params.status, params.search);
+      const p = params || {};
+      return await manuscriptService.getAuthorManuscripts(p.status, p.search);
     } catch (e: any) {
       return rejectWithValue(e.message || 'Failed to fetch author manuscripts');
     }
@@ -72,9 +74,10 @@ export const fetchReviewerManuscripts = createAsyncThunk(
 // Fetch public published papers
 export const fetchPublishedManuscripts = createAsyncThunk(
   'manuscripts/fetchPublished',
-  async (params: { search?: string; domain?: string } = {}, { rejectWithValue }) => {
+  async (params: { search?: string; domain?: string } | void, { rejectWithValue }) => {
     try {
-      return await manuscriptService.getPublishedPapers(params.search, params.domain);
+      const p = params || {};
+      return await manuscriptService.getPublishedPapers(p.search, p.domain);
     } catch (e: any) {
       return rejectWithValue(e.message || 'Failed to fetch published papers');
     }
@@ -125,6 +128,8 @@ export const assignManuscriptReviewer = createAsyncThunk(
       manuscriptId: string;
       reviewerId: string;
       reviewerName: string;
+      reviewer2Id?: string;
+      reviewer2Name?: string;
       deadlineDays?: number;
       notes?: string;
     },
@@ -136,7 +141,9 @@ export const assignManuscriptReviewer = createAsyncThunk(
         payload.reviewerId,
         payload.reviewerName,
         payload.deadlineDays,
-        payload.notes
+        payload.notes,
+        payload.reviewer2Id,
+        payload.reviewer2Name
       );
     } catch (e: any) {
       return rejectWithValue(e.message || 'Reviewer assignment failed');
@@ -154,6 +161,27 @@ export const requestManuscriptRevision = createAsyncThunk(
       return await manuscriptService.requestRevision(payload.manuscriptId, payload.comments);
     } catch (e: any) {
       return rejectWithValue(e.message || 'Revision request failed');
+    }
+  }
+);
+
+export const forwardRevisionThunk = createAsyncThunk(
+  'manuscripts/forwardRevision',
+  async (
+    payload: {
+      manuscriptId: string;
+      deadlineDays?: number;
+      notes?: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      return await manuscriptService.forwardRevisionToReviewer(payload.manuscriptId, {
+        deadlineDays: payload.deadlineDays,
+        notes: payload.notes,
+      });
+    } catch (e: any) {
+      return rejectWithValue(e.message || 'Forwarding revision to reviewer failed');
     }
   }
 );
@@ -343,6 +371,7 @@ export const manuscriptSlice = createSlice({
     };
 
     builder.addCase(assignManuscriptReviewer.fulfilled, updateHandler);
+    builder.addCase(forwardRevisionThunk.fulfilled, updateHandler);
     builder.addCase(requestManuscriptRevision.fulfilled, updateHandler);
     builder.addCase(submitManuscriptRevision.fulfilled, updateHandler);
     builder.addCase(acceptManuscriptThunk.fulfilled, updateHandler);

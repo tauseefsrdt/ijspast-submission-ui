@@ -9,4 +9,5 @@ export interface ReviewerProfile {
   domain: string;
   activeAssignmentsCount: number;
   totalCompletedReviews: number;
+  completedReviewsCount?: number;
 }

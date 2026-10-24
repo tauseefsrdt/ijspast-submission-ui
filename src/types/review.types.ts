@@ -16,6 +16,10 @@ export interface ReviewReport {
   commentsForEditor: string;
   commentsForAuthor: string;
   confidentialComments?: string;
+  stage?: number;
+  stageName?: string;
+  rubricScores?: number[];
+  overallScore?: number;
   submittedAt: string;
 }
 

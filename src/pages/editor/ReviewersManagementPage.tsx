@@ -6,6 +6,8 @@ import { ReviewerProfile } from '../../types/user.types';
 import { Manuscript } from '../../types/manuscript.types';
 import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { EditReviewerModal } from '../../components/modals/EditReviewerModal';
+import { DeleteReviewerModal } from '../../components/modals/DeleteReviewerModal';
 import {
   Users,
   Search,
@@ -24,6 +26,8 @@ import {
   X,
   ExternalLink,
   RefreshCw,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 
 export const ReviewersManagementPage: React.FC = () => {
@@ -33,6 +37,8 @@ export const ReviewersManagementPage: React.FC = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingReviewer, setEditingReviewer] = useState<ReviewerProfile | null>(null);
+  const [deletingReviewer, setDeletingReviewer] = useState<ReviewerProfile | null>(null);
   const [newReviewer, setNewReviewer] = useState({
     name: '',
     email: '',
@@ -124,6 +130,7 @@ export const ReviewersManagementPage: React.FC = () => {
     const targetManuscript = manuscripts.find((m) => m.id === selectedManuscriptId);
     if (!targetManuscript) return;
 
+    const secondReviewer = reviewers.find((r) => r.id !== selectedReviewerForAssign.id);
     setIsSubmittingAssign(true);
     try {
       await dispatch(
@@ -131,13 +138,16 @@ export const ReviewersManagementPage: React.FC = () => {
           manuscriptId: targetManuscript.id,
           reviewerId: selectedReviewerForAssign.id,
           reviewerName: selectedReviewerForAssign.name,
+          reviewer2Id: secondReviewer?.id,
+          reviewer2Name: secondReviewer?.name,
           deadlineDays,
           notes: assignNotes,
         })
       ).unwrap();
 
+      const reviewer2Text = secondReviewer ? ` and ${secondReviewer.name}` : '';
       setSuccessToast(
-        `Successfully assigned ${selectedReviewerForAssign.name} to manuscript "${targetManuscript.id}". Status transitioned to "Under Review". Reviewer notified via email.`
+        `Successfully assigned ${selectedReviewerForAssign.name}${reviewer2Text} to manuscript "${targetManuscript.id}". Status transitioned to "Under Review". Reviewers notified via email.`
       );
       setIsAssignModalOpen(false);
     } catch (err: any) {
@@ -264,15 +274,33 @@ export const ReviewersManagementPage: React.FC = () => {
                     </td>
 
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => handleOpenAssignModal(rev)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                        title={`Assign a manuscript to ${rev.name}`}
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Assign Paper</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenAssignModal(rev)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                          title={`Assign a manuscript to ${rev.name}`}
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Assign Paper</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingReviewer(rev)}
+                          className="p-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 rounded-xl transition-colors cursor-pointer"
+                          title={`Edit ${rev.name}'s profile`}
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeletingReviewer(rev)}
+                          className="p-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-xl transition-colors cursor-pointer"
+                          title={`Delete ${rev.name} from directory`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -553,6 +581,28 @@ export const ReviewersManagementPage: React.FC = () => {
           </form>
         )}
       </Modal>
+
+      {/* Edit Reviewer Modal */}
+      <EditReviewerModal
+        isOpen={!!editingReviewer}
+        onClose={() => setEditingReviewer(null)}
+        reviewer={editingReviewer}
+        onSuccess={(updated) => {
+          setSuccessToast(`Reviewer "${updated.name}" updated successfully.`);
+          dispatch(fetchReviewers());
+        }}
+      />
+
+      {/* Delete Reviewer Confirmation Modal */}
+      <DeleteReviewerModal
+        isOpen={!!deletingReviewer}
+        onClose={() => setDeletingReviewer(null)}
+        reviewer={deletingReviewer}
+        onSuccess={() => {
+          setSuccessToast('Reviewer deleted successfully from journal directory.');
+          dispatch(fetchReviewers());
+        }}
+      />
     </div>
   );
 };

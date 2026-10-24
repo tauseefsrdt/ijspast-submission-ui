@@ -3,14 +3,19 @@ import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchReviewers, createNewReviewer } from '../../store/slices/reviewerSlice';
 import { Modal } from '../common/Modal';
 import { ReviewerProfile } from '../../types/user.types';
-import { Users, Plus, Shield, CheckCircle2, Key } from 'lucide-react';
+import { Users, Plus, Shield, CheckCircle2, UserCheck, AlertTriangle } from 'lucide-react';
 
 interface AssignReviewerModalProps {
   isOpen: boolean;
   onClose: () => void;
   manuscriptTitle: string;
   manuscriptDomain: string;
-  onAssign: (reviewerId: string, reviewerName: string) => Promise<void> | void;
+  onAssign: (
+    reviewer1Id: string,
+    reviewer1Name: string,
+    reviewer2Id?: string,
+    reviewer2Name?: string
+  ) => Promise<void> | void;
 }
 
 export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
@@ -23,8 +28,10 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
   const dispatch = useAppDispatch();
   const { reviewers } = useAppSelector((state) => state.reviewers);
 
-  const [selectedReviewerId, setSelectedReviewerId] = useState('');
+  const [reviewer1Id, setReviewer1Id] = useState('');
+  const [reviewer2Id, setReviewer2Id] = useState('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [targetSlot, setTargetSlot] = useState<1 | 2>(1);
   const [createdCredentials, setCreatedCredentials] = useState<{
     email: string;
     password: string;
@@ -47,14 +54,27 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
     }
   }, [isOpen, dispatch]);
 
+  // Preselect two distinct matching or default reviewers
   useEffect(() => {
-    if (reviewers.length > 0 && !selectedReviewerId) {
-      const match = reviewers.find((r) =>
+    if (reviewers.length >= 2 && (!reviewer1Id || !reviewer2Id)) {
+      const match = reviewers.filter((r) =>
         r.domain.toLowerCase().includes(manuscriptDomain.toLowerCase().slice(0, 10))
       );
-      setSelectedReviewerId(match ? match.id : reviewers[0].id);
+      if (match.length >= 2) {
+        setReviewer1Id(match[0].id);
+        setReviewer2Id(match[1].id);
+      } else if (match.length === 1) {
+        setReviewer1Id(match[0].id);
+        const second = reviewers.find((r) => r.id !== match[0].id);
+        if (second) setReviewer2Id(second.id);
+      } else {
+        setReviewer1Id(reviewers[0].id);
+        setReviewer2Id(reviewers[1].id);
+      }
+    } else if (reviewers.length === 1 && !reviewer1Id) {
+      setReviewer1Id(reviewers[0].id);
     }
-  }, [reviewers, manuscriptDomain, selectedReviewerId]);
+  }, [reviewers, manuscriptDomain, reviewer1Id, reviewer2Id]);
 
   const handleCreateAndAssign = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,28 +100,41 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
       }
 
       if (res?.reviewer) {
-        setSelectedReviewerId(res.reviewer.id);
+        if (targetSlot === 1) {
+          setReviewer1Id(res.reviewer.id);
+        } else {
+          setReviewer2Id(res.reviewer.id);
+        }
       }
+      setIsCreatingNew(false);
     } catch (err: any) {
       console.error('Error creating reviewer:', err);
     }
   };
 
   const handleConfirmAssignment = () => {
-    const rev = reviewers.find((r) => r.id === selectedReviewerId);
-    if (rev) {
-      onAssign(rev.id, rev.name);
+    const rev1 = reviewers.find((r) => r.id === reviewer1Id);
+    const rev2 = reviewers.find((r) => r.id === reviewer2Id);
+
+    if (rev1 && rev2 && rev1.id !== rev2.id) {
+      onAssign(rev1.id, rev1.name, rev2.id, rev2.name);
       onClose();
     }
   };
+
+  const isSameReviewer = reviewer1Id && reviewer2Id && reviewer1Id === reviewer2Id;
+  const canAssign = reviewer1Id && reviewer2Id && !isSameReviewer;
+
+  const rev1 = reviewers.find((r) => r.id === reviewer1Id);
+  const rev2 = reviewers.find((r) => r.id === reviewer2Id);
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Assign Peer Reviewer"
-      subtitle={`Manuscript: ${manuscriptTitle}`}
-      size="md"
+      title="Assign Dual Peer Reviewers"
+      subtitle={`Policy Requirement: Assign exactly two expert reviewers for evaluation`}
+      size="lg"
     >
       {createdCredentials ? (
         <div className="space-y-4 text-xs">
@@ -126,31 +159,30 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
                 <span className="font-bold text-indigo-700">{createdCredentials.password}</span>
               </p>
             </div>
-            <p className="text-[11px] text-slate-500 italic">
-              Note: The reviewer may now log in to the portal using these credentials.
-            </p>
           </div>
 
           <div className="flex justify-end pt-2">
             <button
               type="button"
-              onClick={handleConfirmAssignment}
-              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl"
+              onClick={() => setCreatedCredentials(null)}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl cursor-pointer"
             >
-              Proceed with Assignment
+              Continue Assignment
             </button>
           </div>
         </div>
       ) : isCreatingNew ? (
         <form onSubmit={handleCreateAndAssign} className="space-y-4 text-xs">
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-            <h4 className="font-bold text-slate-800">Enroll New Reviewer</h4>
+            <h4 className="font-bold text-slate-800">
+              Enroll New Reviewer for Slot {targetSlot} (Reviewer {targetSlot})
+            </h4>
             <button
               type="button"
               onClick={() => setIsCreatingNew(false)}
               className="text-indigo-600 hover:underline font-semibold"
             >
-              Select Existing Reviewer
+              Back to Selection
             </button>
           </div>
 
@@ -178,17 +210,31 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
             />
           </div>
 
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">Institution</label>
-            <input
-              type="text"
-              value={newReviewerForm.institution}
-              onChange={(e) =>
-                setNewReviewerForm({ ...newReviewerForm, institution: e.target.value })
-              }
-              placeholder="e.g. Indian Institute of Science"
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Institution</label>
+              <input
+                type="text"
+                value={newReviewerForm.institution}
+                onChange={(e) =>
+                  setNewReviewerForm({ ...newReviewerForm, institution: e.target.value })
+                }
+                placeholder="e.g. Indian Institute of Science"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
+            <div>
+              <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
+              <input
+                type="text"
+                value={newReviewerForm.phone}
+                onChange={(e) =>
+                  setNewReviewerForm({ ...newReviewerForm, phone: e.target.value })
+                }
+                placeholder="+91 9876543210"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+              />
+            </div>
           </div>
 
           <div>
@@ -205,79 +251,165 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
             <button
               type="button"
               onClick={() => setIsCreatingNew(false)}
-              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium"
+              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium cursor-pointer"
             >
-              Back
+              Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl"
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl cursor-pointer"
             >
-              Generate Account &amp; Assign
+              Generate Account &amp; Set as Reviewer {targetSlot}
             </button>
           </div>
         </form>
       ) : (
-        <div className="space-y-4 text-xs">
-          <p className="text-slate-600">
-            Select a verified domain expert from the journal's peer review roster:
-          </p>
-
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-            {reviewers.map((r) => {
-              const isSelected = r.id === selectedReviewerId;
-              return (
-                <div
-                  key={r.id}
-                  onClick={() => setSelectedReviewerId(r.id)}
-                  className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                    isSelected
-                      ? 'bg-indigo-50/80 border-indigo-600 ring-2 ring-indigo-600/10'
-                      : 'bg-white border-slate-200 hover:border-slate-300'
-                  }`}
-                >
-                  <div>
-                    <p className="font-bold text-slate-900">{r.name}</p>
-                    <p className="text-[11px] text-slate-500">{r.domain}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">{r.email}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                      {r.activeAssignmentsCount} active
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+        <div className="space-y-5 text-xs">
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 flex items-start gap-2.5">
+            <Shield className="w-4 h-4 text-blue-700 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <span className="font-bold">Editorial Two-Reviewer Policy:</span>
+              <p className="text-blue-800 text-[11px] leading-relaxed">
+                To guarantee academic rigor and objective evaluation, each submitted manuscript must be assigned to <strong>two distinct peer reviewers</strong>. Both will independently submit evaluations across two stages.
+              </p>
+            </div>
           </div>
+
+          {/* Manuscript Context */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+            <span className="text-[10px] uppercase font-bold text-slate-400">Target Paper</span>
+            <p className="font-bold text-slate-900 line-clamp-1">{manuscriptTitle}</p>
+            <p className="text-slate-500 text-[11px]">Domain: <strong className="text-slate-700">{manuscriptDomain}</strong></p>
+          </div>
+
+          {/* Reviewer Selection Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Slot 1: Reviewer 1 */}
+            <div className="p-4 bg-white border-2 border-indigo-200 rounded-2xl space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 font-bold text-indigo-900 text-xs bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+                  <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Reviewer 1 (Primary)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTargetSlot(1);
+                    setIsCreatingNew(true);
+                  }}
+                  className="text-indigo-600 hover:underline font-bold text-[11px] flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>New</span>
+                </button>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Select First Reviewer:</label>
+                <select
+                  value={reviewer1Id}
+                  onChange={(e) => setReviewer1Id(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs text-slate-900 focus:bg-white focus:border-indigo-600 outline-none"
+                >
+                  <option value="">-- Choose Reviewer 1 --</option>
+                  {reviewers.map((r) => (
+                    <option key={r.id} value={r.id} disabled={r.id === reviewer2Id}>
+                      {r.name} ({r.domain.slice(0, 30)}...)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {rev1 && (
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-[11px] space-y-1">
+                  <p className="font-bold text-slate-900">{rev1.name}</p>
+                  <p className="text-slate-500 truncate">{rev1.institution}</p>
+                  <p className="text-indigo-600 font-mono text-[10px]">{rev1.email}</p>
+                  <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                    {rev1.activeAssignmentsCount || 0} active assignments
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Slot 2: Reviewer 2 */}
+            <div className="p-4 bg-white border-2 border-purple-200 rounded-2xl space-y-3 shadow-2xs">
+              <div className="flex items-center justify-between">
+                <span className="inline-flex items-center gap-1.5 font-bold text-purple-900 text-xs bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                  <UserCheck className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Reviewer 2 (Secondary)</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTargetSlot(2);
+                    setIsCreatingNew(true);
+                  }}
+                  className="text-purple-600 hover:underline font-bold text-[11px] flex items-center gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>New</span>
+                </button>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Select Second Reviewer:</label>
+                <select
+                  value={reviewer2Id}
+                  onChange={(e) => setReviewer2Id(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-xs text-slate-900 focus:bg-white focus:border-purple-600 outline-none"
+                >
+                  <option value="">-- Choose Reviewer 2 --</option>
+                  {reviewers.map((r) => (
+                    <option key={r.id} value={r.id} disabled={r.id === reviewer1Id}>
+                      {r.name} ({r.domain.slice(0, 30)}...)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {rev2 && (
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-[11px] space-y-1">
+                  <p className="font-bold text-slate-900">{rev2.name}</p>
+                  <p className="text-slate-500 truncate">{rev2.institution}</p>
+                  <p className="text-purple-600 font-mono text-[10px]">{rev2.email}</p>
+                  <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                    {rev2.activeAssignmentsCount || 0} active assignments
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isSameReviewer && (
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Reviewer 1 and Reviewer 2 cannot be the same person. Please pick two different reviewers.</span>
+            </div>
+          )}
+
+          {(!reviewer1Id || !reviewer2Id) && (
+            <p className="text-slate-500 text-[11px] italic text-center">
+              Please choose both Reviewer 1 and Reviewer 2 to proceed with assignment.
+            </p>
+          )}
 
           <div className="flex items-center justify-between pt-3 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setIsCreatingNew(true)}
-              className="text-indigo-600 hover:underline font-bold text-xs flex items-center gap-1"
+              onClick={onClose}
+              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer font-medium"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Enroll New Reviewer</span>
+              Cancel
             </button>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!selectedReviewerId}
-                onClick={handleConfirmAssignment}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl disabled:opacity-50"
-              >
-                Assign Reviewer
-              </button>
-            </div>
+            <button
+              type="button"
+              disabled={!canAssign}
+              onClick={handleConfirmAssignment}
+              className="px-5 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer transition-colors shadow-xs"
+            >
+              Assign Both Reviewers (2)
+            </button>
           </div>
         </div>
       )}

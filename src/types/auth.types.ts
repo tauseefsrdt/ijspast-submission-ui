@@ -10,12 +10,14 @@ export interface User {
   domain?: string; // For reviewers
   avatar?: string;
   createdAt: string;
+  token?: string;
 }
 
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isCheckingSession: boolean;
   error: string | null;
 }
 

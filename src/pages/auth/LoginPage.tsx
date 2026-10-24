@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { loginUser, clearAuthError } from '../../store/slices/authSlice';
@@ -13,7 +13,16 @@ import {
 export const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { isLoading, error } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated, isLoading, error } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (user.role === 'author') navigate('/author/dashboard', { replace: true });
+      else if (user.role === 'editor') navigate('/editor/dashboard', { replace: true });
+      else if (user.role === 'reviewer') navigate('/reviewer/dashboard', { replace: true });
+      else navigate('/author/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

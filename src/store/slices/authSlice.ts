@@ -2,10 +2,29 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { AuthState, LoginCredentials, User } from '../../types/auth.types';
 import { authService } from '../../services/authService';
 
+const getStoredSession = (): { user: User | null; isAuthenticated: boolean } => {
+  try {
+    const sessionStr = localStorage.getItem('ijspast_session_v2');
+    if (sessionStr) {
+      const parsed = JSON.parse(sessionStr);
+      if (parsed && parsed.token && parsed.role) {
+        return { user: parsed, isAuthenticated: true };
+      }
+    }
+  } catch (e) {
+    console.error('Failed to parse cached session:', e);
+    localStorage.removeItem('ijspast_session_v2');
+  }
+  return { user: null, isAuthenticated: false };
+};
+
+const cachedSession = getStoredSession();
+
 const initialState: AuthState = {
-  user: null,
-  isAuthenticated: false,
+  user: cachedSession.user,
+  isAuthenticated: cachedSession.isAuthenticated,
   isLoading: false,
+  isCheckingSession: !!cachedSession.user,
   error: null,
 };
 
@@ -67,6 +86,7 @@ export const authSlice = createSlice({
 
     // Check Session
     builder.addCase(checkAuthSession.fulfilled, (state, action) => {
+      state.isCheckingSession = false;
       if (action.payload) {
         state.user = action.payload;
         state.isAuthenticated = true;
@@ -74,6 +94,11 @@ export const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
       }
+    });
+    builder.addCase(checkAuthSession.rejected, (state) => {
+      state.isCheckingSession = false;
+      state.user = null;
+      state.isAuthenticated = false;
     });
   },
 });

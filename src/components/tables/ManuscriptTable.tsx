@@ -122,7 +122,7 @@ export const ManuscriptTable: React.FC<ManuscriptTableProps> = ({
               <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] tracking-wider">
                 <th className="py-3 px-4">Manuscript ID</th>
                 <th className="py-3 px-4">Title &amp; Subject Domain</th>
-                {(currentRole === 'editor' || currentRole === 'reviewer') && (
+                {currentRole === 'editor' && (
                   <th className="py-3 px-4">Corresponding Author</th>
                 )}
                 {showReviewerColumn && <th className="py-3 px-4">Assigned Reviewer</th>}
@@ -155,11 +155,11 @@ export const ManuscriptTable: React.FC<ManuscriptTableProps> = ({
                     </p>
                   </td>
 
-                  {/* Author (visible to Editor and Reviewer) */}
-                  {(currentRole === 'editor' || currentRole === 'reviewer') && (
+                  {/* Author (visible only to Editor - strictly masked for Reviewer) */}
+                  {currentRole === 'editor' && (
                     <td className="py-3.5 px-4 whitespace-nowrap max-w-xs">
-                      <p className="font-semibold text-slate-800">{m.author.name}</p>
-                      <p className="text-[10px] text-slate-400 truncate">{m.author.institution}</p>
+                      <p className="font-semibold text-slate-800">{m.author?.name || 'N/A'}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{m.author?.institution || ''}</p>
                     </td>
                   )}
 

@@ -69,14 +69,26 @@ export const manuscriptService = {
     reviewerId: string,
     reviewerName: string,
     deadlineDays: number = 14,
-    notes?: string
+    notes?: string,
+    reviewer2Id?: string,
+    reviewer2Name?: string
   ): Promise<Manuscript> {
     const res: any = await apiClient.post(`/editor/manuscripts/${manuscriptId}/assign-reviewer`, {
       reviewerId,
       reviewerName,
+      reviewer2Id,
+      reviewer2Name,
       deadlineDays,
       notes,
     });
+    return res.data;
+  },
+
+  async forwardRevisionToReviewer(
+    manuscriptId: string,
+    data?: { deadlineDays?: number; notes?: string }
+  ): Promise<Manuscript> {
+    const res: any = await apiClient.post(`/editor/manuscripts/${manuscriptId}/forward-revision`, data || {});
     return res.data;
   },
 
@@ -149,5 +161,16 @@ export const manuscriptService = {
       console.error('File download failed, attempting window open fallback:', err);
       window.open(`${API_BASE_URL}${downloadUrl}`, '_blank');
     }
+  },
+
+  // Author and Reviewer Schema Views
+  async getAuthorsTable(): Promise<any[]> {
+    const res: any = await apiClient.get('/editor/authors-table');
+    return res.data;
+  },
+
+  async getReviewersTable(): Promise<any[]> {
+    const res: any = await apiClient.get('/editor/reviewers-table');
+    return res.data;
   },
 };

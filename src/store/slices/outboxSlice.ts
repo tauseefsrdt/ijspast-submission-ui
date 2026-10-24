@@ -15,9 +15,10 @@ const initialState: OutboxState = {
 
 export const fetchOutboxEmails = createAsyncThunk(
   'outbox/fetchAll',
-  async (params: { type?: string; search?: string } = {}, { rejectWithValue }) => {
+  async (params: { type?: string; search?: string } | void, { rejectWithValue }) => {
     try {
-      return await outboxService.getOutbox(params.type, params.search);
+      const p = params || {};
+      return await outboxService.getOutbox(p.type, p.search);
     } catch (e: any) {
       return rejectWithValue(e.message || 'Failed to fetch outbox logs');
     }

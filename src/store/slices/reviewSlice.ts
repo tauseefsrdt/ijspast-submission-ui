@@ -35,6 +35,8 @@ export const submitReviewReport = createAsyncThunk(
         commentsForEditor: string;
         commentsForAuthor: string;
         confidentialComments?: string;
+        stage?: number;
+        stageName?: string;
       };
     },
     { rejectWithValue }
@@ -74,7 +76,16 @@ export const reviewSlice = createSlice({
     });
     builder.addCase(submitReviewReport.fulfilled, (state, action) => {
       state.isLoading = false;
-      state.reviews = [action.payload, ...state.reviews];
+      const idx = state.reviews.findIndex(
+        (r) =>
+          r.id === action.payload.id ||
+          (r.reviewerId === action.payload.reviewerId && r.stage === action.payload.stage)
+      );
+      if (idx >= 0) {
+        state.reviews[idx] = action.payload;
+      } else {
+        state.reviews = [action.payload, ...state.reviews];
+      }
     });
     builder.addCase(submitReviewReport.rejected, (state, action) => {
       state.isLoading = false;

@@ -24,6 +24,10 @@ export const reviewService = {
       commentsForEditor: string;
       commentsForAuthor: string;
       confidentialComments?: string;
+      stage?: number;
+      stageName?: string;
+      rubricScores?: number[];
+      overallScore?: number;
     }
   ): Promise<ReviewReport> {
     const res: any = await apiClient.post(`/reviewer/assignments/${manuscriptId}/reviews`, {
@@ -34,6 +38,10 @@ export const reviewService = {
       commentsForEditor: report.commentsForEditor,
       commentsForAuthor: report.commentsForAuthor,
       confidentialComments: report.confidentialComments,
+      stage: report.stage || 1,
+      stageName: report.stageName,
+      rubricScores: report.rubricScores,
+      overallScore: report.overallScore,
     });
     return res.data;
   },

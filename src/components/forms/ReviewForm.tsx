@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ReviewRecommendation } from '../../types/review.types';
-import { Send, Star, Shield, HelpCircle, CheckCircle2, Sparkles } from 'lucide-react';
+import { Send, Star, Shield, HelpCircle, CheckCircle2, Sparkles, Layers } from 'lucide-react';
 
 export const SRMU_CRITERIA = [
   'Relevance and significance of the topic',
@@ -21,6 +21,7 @@ interface ReviewFormProps {
   manuscriptTitle: string;
   reviewerId: string;
   reviewerName: string;
+  stage?: number; // 1 or 2
   isRoundTwo?: boolean;
   authorReplyText?: string;
   onSubmit: (report: {
@@ -34,6 +35,10 @@ interface ReviewFormProps {
     commentsForEditor: string;
     commentsForAuthor: string;
     confidentialComments?: string;
+    stage?: number;
+    stageName?: string;
+    rubricScores?: number[];
+    overallScore?: number;
   }) => Promise<void> | void;
   isLoading?: boolean;
 }
@@ -43,30 +48,35 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   manuscriptTitle,
   reviewerId,
   reviewerName,
+  stage = 1,
   isRoundTwo = false,
   authorReplyText,
   onSubmit,
   isLoading = false,
 }) => {
+  const isStage1 = stage === 1;
+
   const [recommendation, setRecommendation] = useState<ReviewRecommendation>(
-    isRoundTwo ? 'Accept' : 'Minor Revision'
+    isStage1 ? 'Minor Revision' : isRoundTwo ? 'Accept' : 'Accept'
   );
 
   // 11 criteria scores (1 - 5)
   const [scores, setScores] = useState<number[]>(
-    isRoundTwo ? [5, 4, 5, 4, 5, 4, 5, 5, 4, 5, 5] : [4, 4, 4, 4, 3, 4, 4, 4, 4, 3, 5]
+    isStage1
+      ? [4, 4, 4, 4, 3, 4, 4, 4, 4, 3, 5]
+      : [5, 4, 5, 4, 5, 4, 5, 5, 4, 5, 5]
   );
 
   const [commentsForAuthor, setCommentsForAuthor] = useState(
-    isRoundTwo
-      ? 'The revised manuscript adequately addresses the initial points. The methodology is now well justified and the figures are properly annotated.'
-      : '1. Please expand the literature review to include recent benchmark algorithms from 2024-2025.\n2. Clarify the calibration error bounds and sensor drift compensations in Section 3.\n3. Enhance the resolution and font legibility of Figure 4.'
+    isStage1
+      ? '1. Scope & Novelty: The submission addresses a relevant topic with strong potential. Please expand the literature review to include recent benchmark algorithms from 2024-2025.\n2. Methodology: Clarify the calibration error bounds and sensor drift compensations in Section 3.\n3. Visual Presentation: Enhance the resolution and font legibility of Figure 4.'
+      : 'Comprehensive Final Evaluation:\nThe authors have rigorously addressed all technical questions. The theoretical foundations are solid, experimental validations are robust, and statistical error analyses are verified. Recommended for publication.'
   );
 
   const [commentsForEditor, setCommentsForEditor] = useState(
-    isRoundTwo
-      ? 'The author has satisfactorily revised all flagged points. I recommend final acceptance.'
-      : 'Solid scientific contribution suitable for IJSPAST after minor revision. The author should address the 3 specific points noted above.'
+    isStage1
+      ? 'Stage 1 Preliminary Assessment: The paper falls squarely within IJSPAST aims and scope. The work is technically sound, but warrants minor revision on experimental calibration before final acceptance.'
+      : 'Stage 2 Final Evaluation: Solid scientific contribution ready for formal acceptance. The revisions and author explanations are thorough and convincing.'
   );
 
   const [confidentialComments, setConfidentialComments] = useState('');
@@ -112,6 +122,10 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
     const originality = Math.round((scores[1] + scores[2]) / 2);
     const clarity = Math.round((scores[7] + scores[9]) / 2);
 
+    const stageTitle = isStage1
+      ? 'Stage 1: Initial Assessment'
+      : 'Stage 2: Final Evaluation';
+
     onSubmit({
       manuscriptId,
       reviewerId,
@@ -123,204 +137,224 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       commentsForAuthor: commentsForAuthor.trim(),
       commentsForEditor: commentsForEditor.trim(),
       confidentialComments: confidentialComments.trim() || undefined,
+      stage,
+      stageName: stageTitle,
+      rubricScores: scores,
+      overallScore: parseFloat(avgScore),
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
-      {/* Header */}
+      {/* Header with Stage Banner */}
       <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-700">
               {manuscriptId}
             </span>
-            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-              <Shield className="w-3 h-3" />
-              <span>Peer Review Form</span>
+            <span
+              className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${
+                isStage1
+                  ? 'bg-blue-50 text-blue-800 border-blue-200'
+                  : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>{isStage1 ? 'Stage 1 of 2: Initial Assessment' : 'Stage 2 of 2: Comprehensive Final Evaluation'}</span>
             </span>
-            {isRoundTwo && (
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                Round 2 Re-check
-              </span>
-            )}
           </div>
-          <h3 className="text-lg font-bold text-[#0d3b6e] tracking-tight mt-1">
-            {isRoundTwo ? 'Re-check & Updated Peer Review Recommendation' : 'Manuscript Evaluation & Scorecard'}
-          </h3>
+          <h2 className="text-lg font-bold text-slate-900 mt-2">
+            {isStage1
+              ? 'Stage 1: Preliminary Technical & Scope Assessment'
+              : 'Stage 2: Comprehensive Final Evaluation Scorecard'}
+          </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Submit objective evaluation across technical quality, originality, and clarity metrics.
+            {isStage1
+              ? 'Step 1: Evaluate novelty, scope alignment, and core methodology to provide initial feedback to the Editor.'
+              : 'Step 2: Provide thorough in-depth scorecard ratings, detailed section-by-section remarks, and final verdict.'}
           </p>
         </div>
 
-        <div className="text-right shrink-0">
-          <span className="text-[10px] text-slate-400 block font-semibold uppercase">Overall Evaluation</span>
-          <span className="text-xl font-extrabold text-indigo-700">{avgScore} / 5.0</span>
+        <div className="flex items-center gap-2">
+          <div className="text-right">
+            <span className="text-[10px] uppercase font-bold text-slate-400 block">Overall Score</span>
+            <span className="text-lg font-extrabold text-indigo-700">{avgScore} / 5</span>
+          </div>
         </div>
       </div>
 
-      {/* SRMU 11 Criteria Scorecard */}
+      {/* Recommendation Selection */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            SRMU 11-Point Peer Review Standard (1 = Poor, 5 = Excellent)
-          </h4>
-          <div className="flex items-center gap-1 text-[11px] text-slate-500">
-            <span>Quick Fill:</span>
-            {[3, 4, 5].map((val) => (
-              <button
-                key={val}
-                type="button"
-                onClick={() => handleSetAllScores(val)}
-                className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded cursor-pointer"
+        <label className="text-xs font-bold text-slate-900 block uppercase tracking-wider">
+          {isStage1 ? '1. Stage 1 Preliminary Recommendation *' : '1. Stage 2 Final Recommendation *'}
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {recommendations.map((rec) => {
+            const isSelected = recommendation === rec.label;
+            return (
+              <div
+                key={rec.label}
+                onClick={() => setRecommendation(rec.label)}
+                className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                  isSelected
+                    ? rec.label === 'Accept'
+                      ? 'bg-emerald-50/80 border-emerald-600 ring-2 ring-emerald-600/10'
+                      : rec.label === 'Reject'
+                      ? 'bg-rose-50/80 border-rose-600 ring-2 ring-rose-600/10'
+                      : 'bg-indigo-50/80 border-indigo-600 ring-2 ring-indigo-600/10'
+                    : 'bg-white border-slate-200 hover:border-slate-300'
+                }`}
               >
-                All {val}s
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-slate-900">{rec.label}</span>
+                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />}
+                </div>
+                <p className="text-[11px] text-slate-500 leading-tight">{rec.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 11 SRMU Criteria Scorecard */}
+      <div className="space-y-4 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-xs font-bold text-slate-900 block uppercase tracking-wider">
+              2. Technical Evaluation Scorecard (11-Point Rubric)
+            </label>
+            <p className="text-[11px] text-slate-500">
+              Rate each aspect on a scale of 1 (Poor) to 5 (Outstanding)
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="text-slate-400 text-[11px]">Quick Fill:</span>
+            {[3, 4, 5].map((v) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => handleSetAllScores(v)}
+                className="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-[10px] cursor-pointer"
+              >
+                All {v}s
               </button>
             ))}
           </div>
         </div>
 
-        <div className="bg-slate-50/70 border border-slate-200/90 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px] bg-slate-100/70">
-                  <th className="py-2.5 px-4">#</th>
-                  <th className="py-2.5 px-4">Evaluation Criterion</th>
-                  <th className="py-2.5 px-4 text-center">1 (Poor)</th>
-                  <th className="py-2.5 px-4 text-center">2 (Fair)</th>
-                  <th className="py-2.5 px-4 text-center">3 (Good)</th>
-                  <th className="py-2.5 px-4 text-center">4 (V.Good)</th>
-                  <th className="py-2.5 px-4 text-center">5 (Excell)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {SRMU_CRITERIA.map((criterion, idx) => (
-                  <tr key={idx} className="hover:bg-white transition-colors">
-                    <td className="py-2.5 px-4 font-mono font-bold text-slate-400">{idx + 1}</td>
-                    <td className="py-2.5 px-4 font-medium text-slate-800">{criterion}</td>
-                    {[1, 2, 3, 4, 5].map((scoreVal) => (
-                      <td key={scoreVal} className="py-2.5 px-4 text-center">
-                        <input
-                          type="radio"
-                          name={`crit_${idx}`}
-                          checked={scores[idx] === scoreVal}
-                          onChange={() => handleScoreChange(idx, scoreVal)}
-                          className="w-4 h-4 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Recommendation to Editor */}
-      <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-800 block">
-          Recommendation to the Editor-in-Chief *
-        </label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {recommendations.map((rec) => (
-            <label
-              key={rec.label}
-              className={`p-3.5 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
-                recommendation === rec.label
-                  ? 'bg-indigo-50/90 border-indigo-600 text-indigo-950 font-bold shadow-xs ring-2 ring-indigo-600/10'
-                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-              }`}
+        <div className="space-y-2">
+          {SRMU_CRITERIA.map((criterion, idx) => (
+            <div
+              key={idx}
+              className="p-2.5 bg-slate-50/80 rounded-xl border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
             >
               <div className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="recommendation"
-                  value={rec.label}
-                  checked={recommendation === rec.label}
-                  onChange={() => setRecommendation(rec.label)}
-                  className="text-indigo-600"
-                />
-                <span className="text-xs font-bold">{rec.label}</span>
+                <span className="w-5 h-5 rounded-full bg-white border border-slate-200 text-slate-500 font-bold text-[10px] flex items-center justify-center shrink-0">
+                  {idx + 1}
+                </span>
+                <span className="font-medium text-slate-800">{criterion}</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-normal pl-6">{rec.desc}</span>
-            </label>
+
+              <div className="flex items-center gap-1 self-end sm:self-auto">
+                {[1, 2, 3, 4, 5].map((val) => {
+                  const isChecked = scores[idx] === val;
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => handleScoreChange(idx, val)}
+                      className={`w-7 h-7 rounded-lg text-xs font-bold cursor-pointer transition-colors ${
+                        isChecked
+                          ? 'bg-[#0d3b6e] text-white shadow-2xs'
+                          : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      {val}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Comments for the Authors (Anonymized) */}
-      <div className="space-y-1.5 text-xs">
-        <div className="flex items-center justify-between">
-          <label className="font-bold text-slate-800 block">
-            Comments to the Authors (One point per line) *
-          </label>
-          <span className="text-[11px] text-indigo-700 font-semibold bg-indigo-50 px-2 py-0.5 rounded">
-            Passed on anonymously by Editor as "Reviewer 1"
-          </span>
-        </div>
+      {/* Comments for Author */}
+      <div className="space-y-2 pt-2 border-t border-slate-100">
+        <label className="text-xs font-bold text-slate-900 block uppercase tracking-wider">
+          3. Feedback for Author ({isStage1 ? 'Stage 1 Observations & Guidance' : 'Stage 2 Point-by-Point Evaluation'}) *
+        </label>
+        <p className="text-[11px] text-slate-500">
+          This feedback will be relayed to the authors (identities strictly masked).
+        </p>
         <textarea
           rows={4}
           value={commentsForAuthor}
           onChange={(e) => setCommentsForAuthor(e.target.value)}
-          placeholder="1. Please clarify the experimental setup and sample size in Section 3...&#10;2. Include error bars and calibration bounds in Table 2...&#10;3. Add recent citations discussing ambient humidity compensations..."
-          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
+          placeholder="Detailed scientific critiques, constructive suggestions, and requested improvements..."
+          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
         />
         {errors.commentsForAuthor && (
-          <p className="text-rose-600 text-[11px]">{errors.commentsForAuthor}</p>
+          <p className="text-[11px] text-rose-600 font-medium">{errors.commentsForAuthor}</p>
         )}
       </div>
 
-      {/* Confidential Comments to the Editor */}
-      <div className="space-y-1.5 text-xs">
-        <div className="flex items-center justify-between">
-          <label className="font-bold text-slate-800 block">
-            Confidential Comments &amp; Justification for the Editor *
-          </label>
-          <span className="text-[11px] text-amber-800 font-semibold bg-amber-50 px-2 py-0.5 rounded">
-            Strictly Private for Editor-in-Chief
-          </span>
-        </div>
+      {/* Comments for Editor */}
+      <div className="space-y-2 pt-2 border-t border-slate-100">
+        <label className="text-xs font-bold text-slate-900 block uppercase tracking-wider">
+          4. Confidential Assessment for the Editor-in-Chief *
+        </label>
+        <p className="text-[11px] text-slate-500">
+          Direct remarks to the Editor explaining your evaluation reasoning and publication recommendation.
+        </p>
         <textarea
           rows={3}
           value={commentsForEditor}
           onChange={(e) => setCommentsForEditor(e.target.value)}
-          placeholder="Private recommendation for the editor: technical strengths, weaknesses, publication worthiness..."
-          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
+          placeholder="Summary evaluation notes for the Editorial Board..."
+          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
         />
         {errors.commentsForEditor && (
-          <p className="text-rose-600 text-[11px]">{errors.commentsForEditor}</p>
+          <p className="text-[11px] text-rose-600 font-medium">{errors.commentsForEditor}</p>
         )}
       </div>
 
-      {/* Confidential Remarks */}
-      <div className="space-y-1.5 text-xs">
-        <label className="font-bold text-slate-700 flex items-center gap-1.5">
+      {/* Confidential Notes */}
+      <div className="space-y-2 pt-2 border-t border-slate-100">
+        <label className="text-xs font-bold text-amber-900 flex items-center gap-1.5 uppercase tracking-wider">
           <Shield className="w-3.5 h-3.5 text-amber-600" />
-          <span>Additional Editorial Notes (Optional)</span>
+          <span>5. Additional Editorial Remarks (Optional)</span>
         </label>
         <textarea
           rows={2}
           value={confidentialComments}
           onChange={(e) => setConfidentialComments(e.target.value)}
           placeholder="Suspected ethical concerns, duplicate submissions, or conflict of interest notes..."
-          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
+          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
         />
       </div>
 
       {/* Submit Button */}
-      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100">
         <span className="text-[11px] text-slate-500 italic">
-          Submitting forwards your scorecard and comments directly to the Editor. The status will update to "Review Completed".
+          {isStage1
+            ? 'Submitting Stage 1 will log your initial assessment with the Editor and unlock Stage 2 Final Evaluation.'
+            : 'Submitting Stage 2 will conclude your peer review and notify the Editor.'}
         </span>
         <button
           type="submit"
           disabled={isLoading}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
         >
           <Send className="w-4 h-4" />
-          <span>{isLoading ? 'Forwarding to Editor...' : 'Forward Review Report to Editor'}</span>
+          <span>
+            {isLoading
+              ? 'Submitting to Editor...'
+              : isStage1
+              ? 'Submit Stage 1 Preliminary Review to Editor'
+              : 'Submit Stage 2 Final Evaluation to Editor'}
+          </span>
         </button>
       </div>
     </form>

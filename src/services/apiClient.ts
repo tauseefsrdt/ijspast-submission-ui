@@ -33,6 +33,9 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('ijspast_session_v2');
+    }
     const message =
       error.response?.data?.message ||
       (typeof error.response?.data === 'string' ? error.response.data : null) ||

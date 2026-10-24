@@ -5,6 +5,7 @@ import {
   fetchManuscriptById,
   assignManuscriptReviewer,
   requestManuscriptRevision,
+  forwardRevisionThunk,
   acceptManuscriptThunk,
   rejectManuscriptThunk,
   publishManuscriptThunk,
@@ -15,6 +16,7 @@ import { StatusBadge } from '../../components/common/StatusBadge';
 import { AssignReviewerModal } from '../../components/modals/AssignReviewerModal';
 import { Modal } from '../../components/common/Modal';
 import { ReviewReport } from '../../types/review.types';
+import { SRMU_CRITERIA } from '../../components/forms/ReviewForm';
 import {
   ArrowLeft,
   Users,
@@ -29,6 +31,10 @@ import {
   Shield,
   FileCheck,
   RotateCcw,
+  Layers,
+  Star,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 
 export const EditorManuscriptDetails: React.FC = () => {
@@ -44,6 +50,10 @@ export const EditorManuscriptDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'reviewReport' | 'history'>('overview');
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
+  const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
+  const [forwardDeadlineDays, setForwardDeadlineDays] = useState(14);
+  const [forwardNotes, setForwardNotes] = useState('');
+  const [isForwarding, setIsForwarding] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
 
@@ -80,12 +90,87 @@ export const EditorManuscriptDetails: React.FC = () => {
     );
   }
 
-  const handleAssignReviewer = async (reviewerId: string, reviewerName: string) => {
+  // Track Reviewer 1 and Reviewer 2 feedback submissions (Dual review policy)
+  const hasReviewer1 = Boolean(manuscript.assignedReviewerName || manuscript.assignedReviewerId);
+  const hasReviewer2 = Boolean(manuscript.assignedReviewer2Name || manuscript.assignedReviewer2Id);
+  const hasDualReviewers = hasReviewer1 && hasReviewer2;
+
+  const rev1Reports = (reviews || []).filter(
+    (r) =>
+      (manuscript.assignedReviewerId && r.reviewerId === manuscript.assignedReviewerId) ||
+      (manuscript.assignedReviewerName &&
+        r.reviewerName?.toLowerCase() === manuscript.assignedReviewerName.toLowerCase())
+  );
+  const rev2Reports = (reviews || []).filter(
+    (r) =>
+      (manuscript.assignedReviewer2Id && r.reviewerId === manuscript.assignedReviewer2Id) ||
+      (manuscript.assignedReviewer2Name &&
+        r.reviewerName?.toLowerCase() === manuscript.assignedReviewer2Name.toLowerCase())
+  );
+
+  const rev1Final = rev1Reports.length > 0 ? (rev1Reports.find(r => r.stage === 2) || rev1Reports[0]) : (reviews.length >= 1 ? reviews[0] : null);
+  const rev2Final = rev2Reports.length > 0 ? (rev2Reports.find(r => r.stage === 2) || rev2Reports[0]) : (hasReviewer2 && reviews.length >= 2 ? reviews[1] : null);
+
+  const isRev1Submitted = Boolean(rev1Final);
+  const isRev2Submitted = Boolean(rev2Final);
+
+  const bothReviewersSubmitted = hasDualReviewers
+    ? (isRev1Submitted && isRev2Submitted)
+    : (hasReviewer1 ? isRev1Submitted : reviews.length >= 1);
+
+  const handleAutoMergeReviews = () => {
+    let merged = `=== CONSOLIDATED EDITORIAL PEER REVIEW REPORT ===\n`;
+    merged += `Manuscript ID: ${manuscript.id}\n`;
+    merged += `Title: "${manuscript.title}"\n`;
+    merged += `Consolidation Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}\n\n`;
+
+    if (rev1Final) {
+      merged += `--------------------------------------------------\n`;
+      merged += `REVIEWER 1 EVALUATION (Anonymized):\n`;
+      merged += `Recommendation: ${rev1Final.recommendation}\n`;
+      merged += `Evaluation Scores: Technical: ${rev1Final.technicalQuality}/5 | Originality: ${rev1Final.originality}/5 | Clarity: ${rev1Final.clarity}/5`;
+      if (rev1Final.overallScore) {
+        merged += ` | Overall Score: ${rev1Final.overallScore.toFixed(1)}/5.0`;
+      }
+      merged += `\n\nReviewer 1 Specific Comments & Critiques for Author:\n`;
+      merged += `${rev1Final.commentsForAuthor}\n\n`;
+    }
+
+    if (rev2Final) {
+      merged += `--------------------------------------------------\n`;
+      merged += `REVIEWER 2 EVALUATION (Anonymized):\n`;
+      merged += `Recommendation: ${rev2Final.recommendation}\n`;
+      merged += `Evaluation Scores: Technical: ${rev2Final.technicalQuality}/5 | Originality: ${rev2Final.originality}/5 | Clarity: ${rev2Final.clarity}/5`;
+      if (rev2Final.overallScore) {
+        merged += ` | Overall Score: ${rev2Final.overallScore.toFixed(1)}/5.0`;
+      }
+      merged += `\n\nReviewer 2 Specific Comments & Critiques for Author:\n`;
+      merged += `${rev2Final.commentsForAuthor}\n\n`;
+    }
+
+    merged += `--------------------------------------------------\n`;
+    merged += `EDITORIAL BOARD DIRECTIVE & RESUBMISSION INSTRUCTIONS:\n`;
+    merged += `The Editorial Board has synthesized the independent reviewer evaluations above. Before your manuscript can proceed to final decision, you are required to:\n`;
+    merged += `1. Address each critique and question raised by Reviewer 1 and Reviewer 2 in a structured, point-by-point rebuttal letter.\n`;
+    merged += `2. Highlight all modifications, corrections, and added data in your revised manuscript document.\n`;
+    merged += `3. Submit the revised paper and rebuttal response through the Author Portal within 14 days.\n`;
+
+    setRevisionComments(merged);
+  };
+
+  const handleAssignReviewer = async (
+    reviewerId: string,
+    reviewerName: string,
+    reviewer2Id?: string,
+    reviewer2Name?: string
+  ) => {
     await dispatch(
       assignManuscriptReviewer({
         manuscriptId: manuscript.id,
         reviewerId,
         reviewerName,
+        reviewer2Id,
+        reviewer2Name,
       })
     );
   };
@@ -103,16 +188,26 @@ export const EditorManuscriptDetails: React.FC = () => {
     setRevisionComments('');
   };
 
-  const handleForwardToReviewer = async () => {
-    if (!manuscript.assignedReviewerId && !manuscript.assignedReviewerName) return;
-    await dispatch(
-      assignManuscriptReviewer({
-        manuscriptId: manuscript.id,
-        reviewerId: manuscript.assignedReviewerId || 'rev_01',
-        reviewerName: manuscript.assignedReviewerName || 'Dr. Meera Iyer',
-        deadlineDays: 7,
-      })
-    );
+  const handleConfirmForwardRevision = async () => {
+    setIsForwarding(true);
+    try {
+      await dispatch(
+        forwardRevisionThunk({
+          manuscriptId: manuscript.id,
+          deadlineDays: forwardDeadlineDays,
+          notes: forwardNotes.trim() || undefined,
+        })
+      ).unwrap();
+      setIsForwardModalOpen(false);
+      setForwardNotes('');
+      if (id) {
+        await dispatch(fetchManuscriptById(id));
+      }
+    } catch (err: any) {
+      console.error('Failed to forward revision:', err);
+    } finally {
+      setIsForwarding(false);
+    }
   };
 
   const handleConfirmReject = async () => {
@@ -169,6 +264,12 @@ export const EditorManuscriptDetails: React.FC = () => {
                 {manuscript.id}
               </span>
               <StatusBadge status={manuscript.status} size="md" />
+              {manuscript.revisionForwardedToReviewer && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Revision Forwarded to Reviewer</span>
+                </span>
+              )}
               {manuscript.similarityScore !== undefined && (
                 <span
                   className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
@@ -232,24 +333,45 @@ export const EditorManuscriptDetails: React.FC = () => {
             {manuscript.status === 'Revision Submitted' && (
               <button
                 type="button"
-                onClick={handleForwardToReviewer}
+                onClick={() => setIsForwardModalOpen(true)}
                 className="px-4 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                <span>Forward to Reviewer for Re-check (Round 2)</span>
+                <span>Forward Revision to Reviewer(s)</span>
               </button>
             )}
 
-            {/* Request Revision */}
+            {/* Request Revision / Consolidated Review */}
             {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Submitted'].includes(manuscript.status) && (
-              <button
-                type="button"
-                onClick={() => setIsRevisionModalOpen(true)}
-                className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5 text-slate-950" />
-                <span>Request Author Revisions</span>
-              </button>
+              hasDualReviewers && !bothReviewersSubmitted ? (
+                <button
+                  type="button"
+                  onClick={() => setIsRevisionModalOpen(true)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  title="Dual review policy: Both reviewers must submit feedback before consolidated review can be sent to author."
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  <span>
+                    Awaiting Reviewer {isRev1Submitted ? '2' : '1'} ({isRev1Submitted || isRev2Submitted ? '1/2' : '0/2'} Submitted)
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRevisionModalOpen(true);
+                    if (bothReviewersSubmitted && !revisionComments) {
+                      handleAutoMergeReviews();
+                    }
+                  }}
+                  className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5 text-slate-950" />
+                  <span>
+                    {hasDualReviewers ? 'Review & Merge Consolidated Feedback (2/2 Ready)' : 'Request Author Revisions'}
+                  </span>
+                </button>
+              )
             )}
 
             {/* Accept */}
@@ -424,17 +546,48 @@ export const EditorManuscriptDetails: React.FC = () => {
             </div>
 
             <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3 text-xs">
-              <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
-                Peer Review Assignment
-              </h3>
-              {manuscript.assignedReviewerName ? (
-                <div className="space-y-1">
-                  <p className="font-bold text-slate-900">{manuscript.assignedReviewerName}</p>
-                  <p className="text-slate-500">Assigned: {manuscript.assignedDate}</p>
-                  <p className="text-slate-500">Deadline: {manuscript.reviewDeadline}</p>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
+                  Peer Review Assignment (Dual Reviewers)
+                </h3>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                  2 Reviewers Policy
+                </span>
+              </div>
+
+              {manuscript.assignedReviewerName || manuscript.assignedReviewer2Name ? (
+                <div className="space-y-3">
+                  {manuscript.assignedReviewerName && (
+                    <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-indigo-700 block">Reviewer 1 (Primary)</span>
+                      <p className="font-bold text-slate-900">{manuscript.assignedReviewerName}</p>
+                      <p className="text-slate-500 text-[11px]">Assigned: {manuscript.assignedDate || 'Recent'}</p>
+                    </div>
+                  )}
+
+                  {manuscript.assignedReviewer2Name && (
+                    <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-purple-700 block">Reviewer 2 (Secondary)</span>
+                      <p className="font-bold text-slate-900">{manuscript.assignedReviewer2Name}</p>
+                      <p className="text-slate-500 text-[11px]">Assigned: {manuscript.assignedDate || 'Recent'}</p>
+                    </div>
+                  )}
+
+                  <p className="text-slate-500 pt-1 text-[11px]">
+                    Evaluation Deadline: <strong className="text-slate-700">{manuscript.reviewDeadline || 'Within 14 days'}</strong>
+                  </p>
                 </div>
               ) : (
-                <p className="text-slate-400 italic">No reviewer currently assigned.</p>
+                <div className="p-4 text-center bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
+                  <p className="text-slate-500 italic">No reviewers currently assigned.</p>
+                  <button
+                    type="button"
+                    onClick={() => setIsAssignModalOpen(true)}
+                    className="px-3 py-1.5 bg-[#0d3b6e] text-white rounded-lg text-xs font-bold cursor-pointer"
+                  >
+                    Assign 2 Reviewers
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -455,11 +608,22 @@ export const EditorManuscriptDetails: React.FC = () => {
                 className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4"
               >
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                  <div>
-                    <span className="font-bold text-slate-900 text-sm">
-                      {rev.reviewerName}
-                    </span>
-                    <span className="text-xs text-slate-400 ml-2">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">
+                        {rev.reviewerName}
+                      </span>
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
+                          rev.stage === 2
+                            ? 'bg-purple-50 text-purple-800 border-purple-200'
+                            : 'bg-blue-50 text-blue-800 border-blue-200'
+                        }`}
+                      >
+                        {rev.stageName || (rev.stage === 2 ? 'Stage 2: Final Evaluation' : 'Stage 1: Initial Assessment')}
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-400">
                       Submitted on {rev.submittedAt.split('T')[0]}
                     </span>
                   </div>
@@ -477,13 +641,23 @@ export const EditorManuscriptDetails: React.FC = () => {
                   </span>
                 </div>
 
-                {/* Ratings */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                {/* Score Summary Metrics */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div className="p-3 bg-indigo-50/80 rounded-xl border border-indigo-200">
+                    <span className="text-indigo-600 block text-[10px] uppercase font-bold flex items-center gap-1">
+                      <Star className="w-3 h-3 text-indigo-600" />
+                      <span>Overall Score</span>
+                    </span>
+                    <span className="text-lg font-extrabold text-indigo-950">
+                      {rev.overallScore ? `${rev.overallScore.toFixed(1)} / 5.0` : rev.rubricScores && rev.rubricScores.length > 0 ? `${(rev.rubricScores.reduce((a, b) => a + b, 0) / rev.rubricScores.length).toFixed(1)} / 5.0` : '—'}
+                    </span>
+                  </div>
+
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
                     <span className="text-slate-500 block text-[10px] uppercase font-bold">
                       Technical Rigor
                     </span>
-                    <span className="text-base font-extrabold text-indigo-700">
+                    <span className="text-base font-extrabold text-slate-800">
                       {rev.technicalQuality} / 5
                     </span>
                   </div>
@@ -492,20 +666,78 @@ export const EditorManuscriptDetails: React.FC = () => {
                     <span className="text-slate-500 block text-[10px] uppercase font-bold">
                       Originality
                     </span>
-                    <span className="text-base font-extrabold text-indigo-700">
+                    <span className="text-base font-extrabold text-slate-800">
                       {rev.originality} / 5
                     </span>
                   </div>
 
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80">
                     <span className="text-slate-500 block text-[10px] uppercase font-bold">
-                      Clarity &amp; Presentation
+                      Clarity &amp; Style
                     </span>
-                    <span className="text-base font-extrabold text-indigo-700">
+                    <span className="text-base font-extrabold text-slate-800">
                       {rev.clarity} / 5
                     </span>
                   </div>
                 </div>
+
+                {/* Complete SRMU 11-Point Rubric Scorecard (Requirement 3) */}
+                {rev.rubricScores && rev.rubricScores.length > 0 && (
+                  <div className="space-y-2 text-xs pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-indigo-600" />
+                        <span>Complete SRMU 11-Point Rubric Scorecard:</span>
+                      </span>
+                      <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
+                        Scorecard Average: {rev.overallScore ? rev.overallScore.toFixed(2) : (rev.rubricScores.reduce((a, b) => a + b, 0) / rev.rubricScores.length).toFixed(2)} / 5.00
+                      </span>
+                    </div>
+
+                    <div className="bg-slate-50/90 rounded-xl border border-slate-200 overflow-hidden">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="bg-slate-100 border-b border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider">
+                            <th className="py-2.5 px-3 w-10 text-center">#</th>
+                            <th className="py-2.5 px-3">Evaluation Rubric Criterion</th>
+                            <th className="py-2.5 px-3 w-28 text-center">Score (1-5)</th>
+                            <th className="py-2.5 px-3 w-32 text-center">Rating</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {rev.rubricScores.map((score, sIdx) => {
+                            const criterionName = SRMU_CRITERIA[sIdx] || `Criterion ${sIdx + 1}`;
+                            const ratingLabel =
+                              score === 5 ? 'Excellent' :
+                              score === 4 ? 'Good' :
+                              score === 3 ? 'Satisfactory' :
+                              score === 2 ? 'Marginal' : 'Deficient';
+                            const badgeStyle =
+                              score >= 4 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
+                              score === 3 ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                              'bg-rose-50 text-rose-800 border-rose-200';
+
+                            return (
+                              <tr key={sIdx} className="hover:bg-white/70 transition-colors">
+                                <td className="py-2 px-3 text-center font-mono font-bold text-slate-400 text-[11px]">{sIdx + 1}</td>
+                                <td className="py-2 px-3 text-slate-700 font-medium">{criterionName}</td>
+                                <td className="py-2 px-3 text-center">
+                                  <span className="font-extrabold text-slate-900 font-mono text-xs">{score}</span>
+                                  <span className="text-slate-400 text-[10px]"> / 5</span>
+                                </td>
+                                <td className="py-2 px-3 text-center">
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${badgeStyle}`}>
+                                    {ratingLabel}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
 
                 {/* Comments to Author */}
                 <div className="space-y-1 text-xs">
@@ -581,12 +813,109 @@ export const EditorManuscriptDetails: React.FC = () => {
         onAssign={handleAssignReviewer}
       />
 
-      {/* MODAL: Request Revision */}
+      {/* MODAL: Forward Revision to Reviewers (Requirement 2) */}
+      <Modal
+        isOpen={isForwardModalOpen}
+        onClose={() => setIsForwardModalOpen(false)}
+        title="Forward Resubmitted Paper to Reviewers (Round 2)"
+        subtitle={`Manuscript ID: ${manuscript.id} • ${manuscript.title}`}
+        size="lg"
+      >
+        <div className="space-y-4 text-xs">
+          <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl space-y-1.5 text-blue-900">
+            <div className="flex items-center gap-2 font-bold text-xs text-blue-950">
+              <Shield className="w-4 h-4 text-blue-700" />
+              <span>Editorial Transfer Control &amp; Double-Blind Anonymity</span>
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              As Editor, forwarding this revision enables the assigned peer reviewer(s) to access the updated manuscript document and the author's rebuttal notes. Author identifying details remain strictly masked. An email notification will be dispatched to each assigned reviewer without generating or altering credentials.
+            </p>
+          </div>
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+            <span className="font-bold text-slate-800 block">Assigned Reviewer(s):</span>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-slate-700">
+                <span className="font-medium">Primary Reviewer:</span>
+                <span className="font-bold text-slate-900">{manuscript.assignedReviewerName || 'Not assigned'}</span>
+              </div>
+              {manuscript.assignedReviewer2Name && (
+                <div className="flex items-center justify-between text-slate-700">
+                  <span className="font-medium">Secondary Reviewer:</span>
+                  <span className="font-bold text-slate-900">{manuscript.assignedReviewer2Name}</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {manuscript.authorRevisionResponse && (
+            <div className="space-y-1">
+              <span className="font-bold text-slate-800 block">
+                Author Rebuttal &amp; Modification Summary:
+              </span>
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 whitespace-pre-wrap max-h-32 overflow-y-auto font-sans leading-relaxed text-[11px]">
+                {manuscript.authorRevisionResponse}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="font-bold text-slate-800 block mb-1">
+                Re-evaluation Deadline (Days) *
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={forwardDeadlineDays}
+                onChange={(e) => setForwardDeadlineDays(parseInt(e.target.value) || 14)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="font-bold text-slate-800 block">
+              Editorial Instructions / Directives for Reviewers (Optional)
+            </label>
+            <textarea
+              rows={3}
+              value={forwardNotes}
+              onChange={(e) => setForwardNotes(e.target.value)}
+              placeholder="e.g., Please pay special attention to whether the author adequately addressed the methodology queries in Section 3..."
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 font-sans"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              disabled={isForwarding}
+              onClick={() => setIsForwardModalOpen(false)}
+              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isForwarding}
+              onClick={handleConfirmForwardRevision}
+              className="px-5 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            >
+              <Send className="w-4 h-4" />
+              <span>{isForwarding ? 'Forwarding...' : 'Dispatch Revision to Reviewers'}</span>
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MODAL: Request Revision & Consolidated Review Desk */}
       <Modal
         isOpen={isRevisionModalOpen}
         onClose={() => setIsRevisionModalOpen(false)}
-        title="Pass Comments to Author (Request Revisions)"
-        subtitle={`Manuscript: ${manuscript.id}`}
+        title={hasDualReviewers ? 'Consolidated Peer Review Desk (Merge & Send to Author)' : 'Pass Comments to Author (Request Revisions)'}
+        subtitle={`Manuscript: ${manuscript.id} • ${hasDualReviewers ? (bothReviewersSubmitted ? 'Dual Reviews Completed (2/2)' : 'Review Status: Incomplete') : 'Single Reviewer'}`}
         size="lg"
       >
         <div className="space-y-4 text-xs">
@@ -594,44 +923,138 @@ export const EditorManuscriptDetails: React.FC = () => {
           <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2 text-purple-900">
             <Shield className="w-4 h-4 text-purple-700 shrink-0" />
             <p className="text-[11px] leading-relaxed">
-              <strong>Double-Blind Peer Review Guarantee:</strong> All comments forwarded to the author are strictly attributed as <strong>"Reviewer 1"</strong>. Reviewer personal identity is NEVER disclosed.
+              <strong>Double-Blind Guarantee:</strong> All reviewer comments forwarded to the author are strictly anonymized as <strong>"Reviewer 1"</strong> and <strong>"Reviewer 2"</strong>. Reviewer personal identities and contacts are NEVER disclosed.
             </p>
           </div>
 
-          {/* Reviewer Feedback Importer */}
-          {reviews.length > 0 && reviews[0]?.commentsForAuthor && (
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-800">
-                  Received Reviewer Feedback for Author:
-                </span>
+          {/* Dual Reviewer Wait Barrier if only one reviewer has submitted */}
+          {hasDualReviewers && !bothReviewersSubmitted && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+              <div className="flex items-center gap-2 font-bold text-amber-950 text-xs">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Editorial Hold: Waiting for Second Reviewer Feedback</span>
+              </div>
+              <p className="text-amber-900 leading-relaxed text-[11px]">
+                <strong>Policy Requirement:</strong> The Editor must not send consolidated feedback to the Author until both reviewers have submitted their feedback. Because only <strong>{isRev1Submitted || isRev2Submitted ? '1 of 2 reviewers' : '0 of 2 reviewers'}</strong> has submitted so far, you must wait for the second reviewer to submit before merging and dispatching consolidated feedback.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div className={`p-3 rounded-lg border ${isRev1Submitted ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-amber-200 text-amber-900'}`}>
+                  <span className="font-bold block text-[11px]">Reviewer 1 ({manuscript.assignedReviewerName || 'Primary'}):</span>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {isRev1Submitted ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Feedback Submitted ({rev1Final?.recommendation})</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700">
+                        <Clock className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Awaiting Submission</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className={`p-3 rounded-lg border ${isRev2Submitted ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-amber-200 text-amber-900'}`}>
+                  <span className="font-bold block text-[11px]">Reviewer 2 ({manuscript.assignedReviewer2Name || 'Secondary'}):</span>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {isRev2Submitted ? (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Feedback Submitted ({rev2Final?.recommendation})</span>
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700">
+                        <Clock className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Awaiting Submission</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Both Reviewers Submitted (or single reviewer) - Review & Merge Desk */}
+          {bothReviewersSubmitted && (
+            <div className="space-y-3">
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Both Reviewers' Feedback Received (2/2). Ready to merge.</span>
+                </div>
                 <button
                   type="button"
-                  onClick={() => {
-                    const template = `Reviewer 1 Comments:\n${reviews[0].commentsForAuthor}\n\nEditorial Directive:\nPlease provide a point-by-point response and submit the revised manuscript within 7 days.`;
-                    setRevisionComments(template);
-                  }}
-                  className="px-2.5 py-1 bg-[#0d3b6e] hover:bg-[#092b52] text-white rounded-lg font-bold text-[10px] cursor-pointer"
+                  onClick={handleAutoMergeReviews}
+                  className="px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
                 >
-                  Import Reviewer Comments
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Auto-Merge Both Reviews</span>
                 </button>
               </div>
-              <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 text-[11px] whitespace-pre-wrap max-h-32 overflow-y-auto font-sans">
-                {reviews[0].commentsForAuthor}
+
+              {/* Reviewer 1 & Reviewer 2 Comparison Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {rev1Final && (
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                      <span className="font-bold text-indigo-950">Reviewer 1 Feedback:</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
+                        {rev1Final.recommendation}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Scores: Tech {rev1Final.technicalQuality}/5 • Orig {rev1Final.originality}/5 • Clarity {rev1Final.clarity}/5
+                    </div>
+                    <div className="p-2 bg-white rounded border border-slate-200 text-slate-700 text-[11px] whitespace-pre-wrap max-h-24 overflow-y-auto font-sans leading-relaxed">
+                      {rev1Final.commentsForAuthor}
+                    </div>
+                  </div>
+                )}
+
+                {rev2Final && (
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                      <span className="font-bold text-purple-950">Reviewer 2 Feedback:</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
+                        {rev2Final.recommendation}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      Scores: Tech {rev2Final.technicalQuality}/5 • Orig {rev2Final.originality}/5 • Clarity {rev2Final.clarity}/5
+                    </div>
+                    <div className="p-2 bg-white rounded border border-slate-200 text-slate-700 text-[11px] whitespace-pre-wrap max-h-24 overflow-y-auto font-sans leading-relaxed">
+                      {rev2Final.commentsForAuthor}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="font-bold text-slate-800 block">
-              Revision Directives to Forward to Author *
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-800 block">
+                Consolidated Editorial Review Report for Author *
+              </label>
+              {bothReviewersSubmitted && (
+                <button
+                  type="button"
+                  onClick={handleAutoMergeReviews}
+                  className="text-indigo-600 hover:text-indigo-800 text-[11px] font-bold underline cursor-pointer"
+                >
+                  Regenerate Merged Template
+                </button>
+              )}
+            </div>
             <textarea
-              rows={5}
+              rows={8}
               value={revisionComments}
               onChange={(e) => setRevisionComments(e.target.value)}
-              placeholder="Enter or customize the comments to be forwarded anonymously to the author..."
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
+              placeholder={hasDualReviewers && !bothReviewersSubmitted ? "Waiting for both reviewers to submit feedback before consolidated report can be composed..." : "Review and synthesize both reviewers' feedback above into this consolidated report to dispatch to the author..."}
+              disabled={hasDualReviewers && !bothReviewersSubmitted}
+              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans disabled:opacity-60 disabled:cursor-not-allowed"
             />
           </div>
 
@@ -641,14 +1064,20 @@ export const EditorManuscriptDetails: React.FC = () => {
               onClick={() => setIsRevisionModalOpen(false)}
               className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium cursor-pointer"
             >
-              Cancel
+              Close
             </button>
             <button
               type="button"
+              disabled={(hasDualReviewers && !bothReviewersSubmitted) || !revisionComments.trim()}
               onClick={handleConfirmRevision}
-              className="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl shadow-xs cursor-pointer"
+              className="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
-              Dispatch Revision Request to Author
+              <Send className="w-4 h-4 text-slate-950" />
+              <span>
+                {hasDualReviewers && !bothReviewersSubmitted
+                  ? `Waiting for Reviewer ${isRev1Submitted ? '2' : '1'} (Cannot Send)`
+                  : 'Dispatch Consolidated Feedback to Author'}
+              </span>
             </button>
           </div>
         </div>

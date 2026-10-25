@@ -69,6 +69,7 @@ export interface Manuscript {
   revisionRequestComments?: string;
   authorRevisionResponse?: string;
   revisionForwardedToReviewer?: boolean;
+  stage2EnabledByEditor?: boolean;
   reviewerFeedbackForAuthor?: string;
   reviewerFeedbackForEditor?: string;
   rejectionReason?: string;

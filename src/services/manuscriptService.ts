@@ -92,6 +92,11 @@ export const manuscriptService = {
     return res.data;
   },
 
+  async enableStage2Review(manuscriptId: string): Promise<Manuscript> {
+    const res: any = await apiClient.post(`/editor/manuscripts/${manuscriptId}/enable-stage2`);
+    return res.data;
+  },
+
   async requestRevision(manuscriptId: string, comments: string): Promise<Manuscript> {
     const res: any = await apiClient.post(`/editor/manuscripts/${manuscriptId}/decision`, {
       decision: 'REQUEST_REVISION',

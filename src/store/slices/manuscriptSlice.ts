@@ -186,6 +186,17 @@ export const forwardRevisionThunk = createAsyncThunk(
   }
 );
 
+export const enableStage2Thunk = createAsyncThunk(
+  'manuscripts/enableStage2',
+  async (manuscriptId: string, { rejectWithValue }) => {
+    try {
+      return await manuscriptService.enableStage2Review(manuscriptId);
+    } catch (e: any) {
+      return rejectWithValue(e.message || 'Failed to enable Stage 2 review');
+    }
+  }
+);
+
 export const submitManuscriptRevision = createAsyncThunk(
   'manuscripts/submitRevision',
   async (
@@ -372,6 +383,7 @@ export const manuscriptSlice = createSlice({
 
     builder.addCase(assignManuscriptReviewer.fulfilled, updateHandler);
     builder.addCase(forwardRevisionThunk.fulfilled, updateHandler);
+    builder.addCase(enableStage2Thunk.fulfilled, updateHandler);
     builder.addCase(requestManuscriptRevision.fulfilled, updateHandler);
     builder.addCase(submitManuscriptRevision.fulfilled, updateHandler);
     builder.addCase(acceptManuscriptThunk.fulfilled, updateHandler);

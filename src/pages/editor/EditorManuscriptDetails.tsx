@@ -6,6 +6,7 @@ import {
   assignManuscriptReviewer,
   requestManuscriptRevision,
   forwardRevisionThunk,
+  enableStage2Thunk,
   acceptManuscriptThunk,
   rejectManuscriptThunk,
   publishManuscriptThunk,
@@ -108,15 +109,26 @@ export const EditorManuscriptDetails: React.FC = () => {
         r.reviewerName?.toLowerCase() === manuscript.assignedReviewer2Name.toLowerCase())
   );
 
-  const rev1Final = rev1Reports.length > 0 ? (rev1Reports.find(r => r.stage === 2) || rev1Reports[0]) : (reviews.length >= 1 ? reviews[0] : null);
-  const rev2Final = rev2Reports.length > 0 ? (rev2Reports.find(r => r.stage === 2) || rev2Reports[0]) : (hasReviewer2 && reviews.length >= 2 ? reviews[1] : null);
+  // Only use reviews[0] as fallback for rev1 if no reviewer ID/name match exists but a reviewer IS assigned.
+  // Never fall back to reviews[1] for rev2 — it could be the same reviewer's Stage 2 report.
+  const rev1Final = rev1Reports.length > 0
+    ? (rev1Reports.find(r => r.stage === 2) || rev1Reports[0])
+    : (hasReviewer1 && rev2Reports.length === 0 && reviews.length >= 1 ? reviews[0] : null);
+
+  // rev2Final must only come from reports actually matched to the second assigned reviewer.
+  // Do NOT fall back to reviews[1] — that may be the first reviewer's Stage 2 report.
+  const rev2Final = rev2Reports.length > 0
+    ? (rev2Reports.find(r => r.stage === 2) || rev2Reports[0])
+    : null;
 
   const isRev1Submitted = Boolean(rev1Final);
   const isRev2Submitted = Boolean(rev2Final);
 
+  // "Both submitted" requires BOTH assigned reviewers to have independently submitted.
+  // Single-reviewer manuscripts are handled separately (no dual-merge button shown).
   const bothReviewersSubmitted = hasDualReviewers
     ? (isRev1Submitted && isRev2Submitted)
-    : (hasReviewer1 ? isRev1Submitted : reviews.length >= 1);
+    : isRev1Submitted;
 
   const handleAutoMergeReviews = () => {
     let merged = `=== CONSOLIDATED EDITORIAL PEER REVIEW REPORT ===\n`;
@@ -339,6 +351,45 @@ export const EditorManuscriptDetails: React.FC = () => {
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Forward Revisions to Reviewers</span>
               </button>
+            )}
+
+            {/* Enable Stage 2 Review — requires ALL assigned reviewers (donor reviewers) to have submitted Stage 1 feedback */}
+            {['Under Review', 'Review Completed', 'Editor Assessment'].includes(manuscript.status) &&
+              bothReviewersSubmitted &&
+              !manuscript.stage2EnabledByEditor && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await dispatch(enableStage2Thunk(manuscript.id));
+                    if (id) await dispatch(fetchManuscriptById(id));
+                  }}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Enable Stage 2 Review</span>
+                </button>
+              )}
+
+            {/* Stage 2 blocked — donor reviewer feedback not yet submitted */}
+            {['Under Review', 'Review Completed', 'Editor Assessment'].includes(manuscript.status) &&
+              !bothReviewersSubmitted &&
+              (isRev1Submitted || isRev2Submitted) &&
+              !manuscript.stage2EnabledByEditor && (
+                <span
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5"
+                  title="Stage 2 cannot be enabled until all assigned reviewers (donor reviewers) submit their Stage 1 feedback."
+                >
+                  <Clock className="w-3.5 h-3.5 text-amber-600" />
+                  Awaiting Donor Reviewer {isRev1Submitted ? '2' : '1'} Feedback for Stage 2
+                </span>
+              )}
+
+            {/* Stage 2 Already Enabled indicator */}
+            {manuscript.stage2EnabledByEditor && (
+              <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                Stage 2 Enabled
+              </span>
             )}
 
             {/* Request Revision / Consolidated Review */}

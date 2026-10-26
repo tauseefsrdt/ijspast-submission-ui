@@ -5,8 +5,8 @@ import {
   fetchManuscripts,
   fetchManuscriptById,
   submitManuscriptRevision,
-} from '../../store/slices/manuscriptSlice';
-import { manuscriptService } from '../../services/manuscriptService';
+  downloadManuscriptFile,
+} from '../../features/manuscripts/manuscriptThunk';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { RevisionForm } from '../../components/forms/RevisionForm';
 import {
@@ -279,7 +279,7 @@ export const AuthorManuscriptDetails: React.FC = () => {
                 <td className="py-3 px-4 text-right">
                   <button
                     type="button"
-                    onClick={() => manuscriptService.downloadFile(manuscript.file.url || manuscript.file.name, manuscript.file.name)}
+                    onClick={() => downloadManuscriptFile(manuscript.file.url || manuscript.file.name, manuscript.file.name)}
                     className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-bold cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -296,7 +296,7 @@ export const AuthorManuscriptDetails: React.FC = () => {
                   <td className="py-3 px-4 text-right">
                     <button
                       type="button"
-                      onClick={() => manuscriptService.downloadFile(rf.url || rf.name, rf.name)}
+                      onClick={() => downloadManuscriptFile(rf.url || rf.name, rf.name)}
                       className="inline-flex items-center gap-1 px-3 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-700 font-bold cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />

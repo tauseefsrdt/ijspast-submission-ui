@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '../../store';
-import { fetchOutboxEmails } from '../../store/slices/outboxSlice';
-import { DispatchedEmail } from '../../services/outboxService';
+import { useAppDispatch, useAppSelector } from '../../app/store';
+import { fetchOutboxEmails } from '../../features/outbox/outboxThunk';
+import { DispatchedEmail } from '../../types/outbox.types';
 import { Mail, Key, Clock, CheckCircle2, Search, ExternalLink, Shield, RefreshCw } from 'lucide-react';
 
 export const OutboxPage: React.FC = () => {

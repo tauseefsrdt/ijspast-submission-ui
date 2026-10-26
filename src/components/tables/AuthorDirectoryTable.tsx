@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { manuscriptService } from '../../services/manuscriptService';
+import { getAuthorsTable } from '../../features/manuscripts/manuscriptThunk';
 import { AuthorTableItem } from '../../types/manuscript.types';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -31,7 +31,7 @@ export const AuthorDirectoryTable: React.FC = () => {
   const fetchAuthors = async () => {
     setIsLoading(true);
     try {
-      const data = await manuscriptService.getAuthorsTable();
+      const data = await getAuthorsTable();
       setAuthors(data || []);
       if (data && data.length > 0 && !expandedAuthorId) {
         setExpandedAuthorId(data[0].id);

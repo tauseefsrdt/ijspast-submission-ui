@@ -10,9 +10,9 @@ import {
   acceptManuscriptThunk,
   rejectManuscriptThunk,
   publishManuscriptThunk,
-} from '../../store/slices/manuscriptSlice';
-import { fetchReviewsByManuscript } from '../../store/slices/reviewSlice';
-import { manuscriptService } from '../../services/manuscriptService';
+  downloadManuscriptFile,
+} from '../../features/manuscripts/manuscriptThunk';
+import { fetchReviewsByManuscript } from '../../features/reviews/reviewThunk';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { AssignReviewerModal } from '../../components/modals/AssignReviewerModal';
 import { Modal } from '../../components/common/Modal';
@@ -570,7 +570,7 @@ export const EditorManuscriptDetails: React.FC = () => {
                 </p>
                 <button
                   type="button"
-                  onClick={() => manuscriptService.downloadFile(manuscript.file.url || manuscript.file.name, manuscript.file.name)}
+                  onClick={() => downloadManuscriptFile(manuscript.file.url || manuscript.file.name, manuscript.file.name)}
                   className="w-full py-1.5 bg-[#0d3b6e] text-white rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
@@ -586,7 +586,7 @@ export const EditorManuscriptDetails: React.FC = () => {
                   <p className="font-mono text-slate-800 text-[11px] truncate">{rf.name}</p>
                   <button
                     type="button"
-                    onClick={() => manuscriptService.downloadFile(rf.url || rf.name, rf.name)}
+                    onClick={() => downloadManuscriptFile(rf.url || rf.name, rf.name)}
                     className="w-full py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-950 rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />

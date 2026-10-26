@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store';
-import { fetchPublishedManuscripts } from '../../store/slices/manuscriptSlice';
-import { manuscriptService } from '../../services/manuscriptService';
+import { fetchPublishedManuscripts, downloadManuscriptFile } from '../../features/manuscripts/manuscriptThunk';
 import {
   BookOpen,
   Search,
@@ -42,7 +41,7 @@ export const PublishedPapersPage: React.FC = () => {
     }
     setDownloadingId(id);
     try {
-      await manuscriptService.downloadFile(fileUrl, fileName);
+      await downloadManuscriptFile(fileUrl, fileName);
     } finally {
       setDownloadingId(null);
     }

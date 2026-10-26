@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchManuscripts, assignManuscriptReviewer } from '../../store/slices/manuscriptSlice';
 import { fetchReviewers, createNewReviewer } from '../../store/slices/reviewerSlice';
-import { reviewService } from '../../services/reviewService';
+import { getReviewsByManuscriptApi } from '../../features/reviews/reviewThunk';
 import { StatCard } from '../../components/common/StatCard';
 import { ManuscriptTable } from '../../components/tables/ManuscriptTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -115,7 +115,7 @@ export const EditorDashboard: React.FC = () => {
           m.status === 'Accepted'
         ) {
           try {
-            const list = await reviewService.getReviewsByManuscript(m.id, 'editor');
+            const list = await getReviewsByManuscriptApi(m.id, 'editor');
             setReviewsCache((prev) => ({ ...prev, [m.id]: list }));
           } catch {
             // ignore
@@ -197,7 +197,7 @@ export const EditorDashboard: React.FC = () => {
     setSelectedManuscriptForDossier(m);
     setIsDossierLoading(true);
     try {
-      const reports = await reviewService.getReviewsByManuscript(m.id, 'editor');
+      const reports = await getReviewsByManuscriptApi(m.id, 'editor');
       setDossierReviews(reports);
       setReviewsCache((prev) => ({ ...prev, [m.id]: reports }));
     } catch (err) {

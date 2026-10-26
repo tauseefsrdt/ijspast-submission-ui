@@ -26,15 +26,7 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({ allowedRoles }) 
   }
 
   if (!allowedRoles.includes(user.role)) {
-    // Redirect to the user's appropriate dashboard
-    const defaultRoute =
-      user.role === 'author'
-        ? '/author/dashboard'
-        : user.role === 'editor'
-        ? '/editor/dashboard'
-        : '/reviewer/dashboard';
-
-    return <Navigate to={defaultRoute} replace />;
+    return <Navigate to="/unauthorized" replace />;
   }
 
   return <Outlet />;

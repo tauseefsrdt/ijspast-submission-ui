@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { manuscriptService } from '../../services/manuscriptService';
+import { getReviewersTable } from '../../features/manuscripts/manuscriptThunk';
 import { ReviewerTableItem } from '../../types/manuscript.types';
 import { StatusBadge } from '../common/StatusBadge';
 import {
@@ -35,7 +35,7 @@ export const ReviewerDirectoryTable: React.FC = () => {
   const fetchReviewersData = async () => {
     setIsLoading(true);
     try {
-      const data = await manuscriptService.getReviewersTable();
+      const data = await getReviewersTable();
       setReviewers(data || []);
       if (data && data.length > 0 && !expandedReviewerId) {
         setExpandedReviewerId(data[0].id);

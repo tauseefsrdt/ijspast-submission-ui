@@ -1,17 +1,17 @@
-import axios from 'axios';
+import axios, { AxiosInstance } from 'axios';
 
-export const API_BASE_URL =
+export const API_BASE_URL: string =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 
-export const apiClient = axios.create({
+export const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Automatically attach JWT Bearer token to requests
-apiClient.interceptors.request.use(
+// Request Interceptor: Attach JWT Bearer token
+axiosInstance.interceptors.request.use(
   (config) => {
     const sessionStr = localStorage.getItem('ijspast_session_v2');
     if (sessionStr) {
@@ -29,8 +29,8 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response error handler to extract server message
-apiClient.interceptors.response.use(
+// Response Interceptor: Standardize error handling and auto-clear invalid session on 401
+axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response && error.response.status === 401) {
@@ -44,3 +44,7 @@ apiClient.interceptors.response.use(
     return Promise.reject(new Error(message));
   }
 );
+
+// Alias export for maximum compatibility
+export const apiClient = axiosInstance;
+export default axiosInstance;

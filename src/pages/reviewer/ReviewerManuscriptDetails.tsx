@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { submitReviewReport, fetchReviewsByManuscript } from '../../store/slices/reviewSlice';
-import { fetchReviewerManuscripts, fetchManuscriptById } from '../../store/slices/manuscriptSlice';
+import { fetchReviewerManuscripts, fetchManuscriptById, downloadManuscriptFile } from '../../features/manuscripts/manuscriptThunk';
 import { ReviewForm } from '../../components/forms/ReviewForm';
-import { manuscriptService } from '../../services/manuscriptService';
 import { ReviewReport, ReviewRecommendation } from '../../types/review.types';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import {
@@ -165,7 +164,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
           <div className="flex flex-col sm:flex-row gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => manuscriptService.downloadFile(latestFile.url || latestFile.name, latestFile.name)}
+              onClick={() => downloadManuscriptFile(latestFile.url || latestFile.name, latestFile.name)}
               className="px-4 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
             >
               <Download className="w-4 h-4" />

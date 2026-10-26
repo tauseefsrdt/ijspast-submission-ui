@@ -465,13 +465,19 @@ export const EditorDashboard: React.FC = () => {
                       <GraduationCap className="w-3 h-3" />
                       <span>Assigned Reviewers (2)</span>
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setAssignModalTarget(activePaper)}
-                      className="text-[11px] font-bold text-indigo-600 hover:underline"
-                    >
-                      {activePaper.assignedReviewerName && activePaper.assignedReviewer2Name ? 'Reassign' : 'Assign 2 Reviewers'}
-                    </button>
+                    {((activePaper.revisionCount ?? 0) >= 2 || (activePaper.revisedFiles?.length ?? 0) >= 2) ? (
+                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                        Revisions Completed (2/2)
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setAssignModalTarget(activePaper)}
+                        className="text-[11px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                      >
+                        {activePaper.assignedReviewerName && activePaper.assignedReviewer2Name ? 'Reassign' : 'Assign 2 Reviewers'}
+                      </button>
+                    )}
                   </div>
 
                   <div className="space-y-2">

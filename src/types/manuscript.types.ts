@@ -56,6 +56,7 @@ export interface Manuscript {
   coauthors?: string;
   file: UploadedFile;
   revisedFiles?: UploadedFile[];
+  revisionCount?: number;
   status: ManuscriptStatus;
   submissionDate: string;
   updatedAt: string;

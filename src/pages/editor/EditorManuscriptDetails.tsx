@@ -127,6 +127,17 @@ export const EditorManuscriptDetails: React.FC = () => {
     manuscript.history?.some((h) => h.status === 'Revision Submitted')
   );
 
+  // Track revision submission count: if the author has submitted the revised manuscript twice,
+  // editorial workflow restricts actions to ONLY Accept Manuscript and Reject Manuscript.
+  const actualRevisionCount =
+    typeof manuscript.revisionCount === 'number' && manuscript.revisionCount > 0
+      ? manuscript.revisionCount
+      : Math.max(
+          manuscript.revisedFiles?.length || 0,
+          (manuscript.history || []).filter((h) => h.status === 'Revision Submitted').length
+        );
+  const isMaxRevisionsReached = actualRevisionCount >= 2;
+
   // Stage 1 initial evaluation reports
   const rev1Stage1 = rev1Reports.find((r) => r.stage === 1 || (!r.stage && rev1Reports.length === 1)) || rev1Reports[0] || (hasReviewer1 && rev2Reports.length === 0 && reviews.length >= 1 ? reviews[0] : null);
   const rev2Stage1 = rev2Reports.find((r) => r.stage === 1 || (!r.stage && rev2Reports.length === 1)) || rev2Reports[0] || null;
@@ -424,6 +435,28 @@ export const EditorManuscriptDetails: React.FC = () => {
           </div>
         </div>
 
+        {/* Maximum Revisions Notice */}
+        {isMaxRevisionsReached && !['Accepted', 'Published', 'Rejected'].includes(manuscript.status) && (
+          <div className="mt-4 p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl flex items-center justify-between text-xs text-amber-950 shadow-2xs">
+            <div className="flex items-center gap-2.5">
+              <div className="p-1.5 bg-amber-100 text-amber-800 rounded-lg shrink-0">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-bold block text-slate-900">
+                  Maximum Revisions Submitted (2/2) — Final Decision Stage
+                </span>
+                <span className="text-slate-600 text-[11px]">
+                  The author has submitted two revised versions ({actualRevisionCount} revisions on record). In accordance with journal protocol, further reviewer reassignment, forwarding, or revision requests are closed. You must now make a final decision: <strong>Accept Manuscript</strong> or <strong>Reject Manuscript</strong>.
+                </span>
+              </div>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase bg-amber-200/80 text-amber-900 border border-amber-300 shrink-0 ml-3">
+              Final Decision Only
+            </span>
+          </div>
+        )}
+
         {/* Action Controls Bar */}
         <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -433,152 +466,217 @@ export const EditorManuscriptDetails: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {/* Assign Reviewer */}
-            {['Submitted', 'Editor Assessment', 'Revision Submitted'].includes(manuscript.status) && (
-              <button
-                type="button"
-                onClick={() => setIsAssignModalOpen(true)}
-                className="px-4 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <Users className="w-3.5 h-3.5" />
-                <span>
-                  {manuscript.assignedReviewerName ? 'Reassign Reviewer' : 'Assign Reviewer'}
-                </span>
-              </button>
-            )}
+            {/* When author has submitted the revised manuscript twice, display ONLY Accept Manuscript and Reject Manuscript */}
+            {isMaxRevisionsReached && !['Accepted', 'Published', 'Rejected'].includes(manuscript.status) ? (
+              <>
+                {/* Accept Manuscript */}
+                <button
+                  type="button"
+                  id="btn-accept-manuscript"
+                  onClick={handleAccept}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Accept Manuscript</span>
+                </button>
 
-            {/* Forward to Reviewer (Round 2) */}
-            {manuscript.status === 'Revision Submitted' && (
-              <button
-                type="button"
-                onClick={() => setIsForwardModalOpen(true)}
-                className="px-4 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Forward Revisions to Reviewers</span>
-              </button>
-            )}
-
-            {/* Enable Stage 2 Review / Stage 2 Enabled indicator */}
-            {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Requested', 'Revision Submitted'].includes(manuscript.status) && (
-              isStage2ActuallyActive ? (
-                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  Stage 2 Enabled
-                </span>
-              ) : bothStage1Submitted ? (
-                canEnableStage2 ? (
+                {/* Reject Manuscript */}
+                <button
+                  type="button"
+                  id="btn-reject-manuscript"
+                  onClick={() => setIsRejectModalOpen(true)}
+                  className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Reject Manuscript</span>
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Assign Reviewer */}
+                {['Submitted', 'Editor Assessment', 'Revision Submitted'].includes(manuscript.status) && (
                   <button
                     type="button"
-                    onClick={async () => {
-                      try {
-                        await dispatch(enableStage2Thunk(manuscript.id)).unwrap();
-                        if (id) await dispatch(fetchManuscriptById(id));
-                      } catch (err: any) {
-                        alert(typeof err === 'string' ? err : err?.message || 'Failed to enable Stage 2 review.');
-                      }
-                    }}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                    title="Enable Stage 2 Final Evaluation for assigned reviewers"
+                    onClick={() => setIsAssignModalOpen(true)}
+                    className="px-4 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Enable Stage 2 Review</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-400 font-bold text-xs rounded-xl shadow-none flex items-center gap-1.5 cursor-not-allowed opacity-75"
-                    title={
-                      !hasSentConsolidatedFeedback
-                        ? "Stage 2 Review disabled: Editor must first review & merge consolidated feedback and dispatch to author."
-                        : !hasAuthorResubmitted
-                        ? "Stage 2 Review disabled: Waiting for author to resubmit the revised manuscript."
-                        : !isForwardedOrReassigned
-                        ? "Stage 2 Review disabled: Editor must first perform either 'Forward Revisions to Reviewers' or 'Reassign Reviewer'."
-                        : "Stage 2 Review disabled: Workflow prerequisites not met."
-                    }
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-slate-400" />
+                    <Users className="w-3.5 h-3.5" />
                     <span>
-                      {hasAuthorResubmitted && !isForwardedOrReassigned
-                        ? 'Stage 2 (Awaiting Forward / Reassign)'
-                        : 'Enable Stage 2 Review'}
+                      {manuscript.assignedReviewerName ? 'Reassign Reviewer' : 'Assign Reviewer'}
                     </span>
                   </button>
-                )
-              ) : (isRev1Stage1Submitted || isRev2Stage1Submitted) ? (
-                <span
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5"
-                  title="Stage 2 cannot be enabled until all assigned reviewers submit their Stage 1 feedback."
-                >
-                  <Clock className="w-3.5 h-3.5 text-amber-600" />
-                  Awaiting Donor Reviewer {isRev1Stage1Submitted ? '2' : '1'} Feedback for Stage 2
-                </span>
-              ) : null
+                )}
+
+                {/* Forward to Reviewer (Round 2) */}
+                {manuscript.status === 'Revision Submitted' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsForwardModalOpen(true)}
+                    className="px-4 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Forward Revisions to Reviewers</span>
+                  </button>
+                )}
+
+                {/* Enable Stage 2 Review / Stage 2 Enabled indicator */}
+                {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Requested', 'Revision Submitted'].includes(manuscript.status) && (
+                  isStage2ActuallyActive ? (
+                    <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                      Stage 2 Enabled
+                    </span>
+                  ) : bothStage1Submitted ? (
+                    canEnableStage2 ? (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await dispatch(enableStage2Thunk(manuscript.id)).unwrap();
+                            if (id) await dispatch(fetchManuscriptById(id));
+                          } catch (err: any) {
+                            alert(typeof err === 'string' ? err : err?.message || 'Failed to enable Stage 2 review.');
+                          }
+                        }}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                        title="Enable Stage 2 Final Evaluation for assigned reviewers"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Enable Stage 2 Review</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-400 font-bold text-xs rounded-xl shadow-none flex items-center gap-1.5 cursor-not-allowed opacity-75"
+                        title={
+                          !hasSentConsolidatedFeedback
+                            ? "Stage 2 Review disabled: Editor must first review & merge consolidated feedback and dispatch to author."
+                            : !hasAuthorResubmitted
+                            ? "Stage 2 Review disabled: Waiting for author to resubmit the revised manuscript."
+                            : !isForwardedOrReassigned
+                            ? "Stage 2 Review disabled: Editor must first perform either 'Forward Revisions to Reviewers' or 'Reassign Reviewer'."
+                            : "Stage 2 Review disabled: Workflow prerequisites not met."
+                        }
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-slate-400" />
+                        <span>
+                          {hasAuthorResubmitted && !isForwardedOrReassigned
+                            ? 'Stage 2 (Awaiting Forward / Reassign)'
+                            : 'Enable Stage 2 Review'}
+                        </span>
+                      </button>
+                    )
+                  ) : (isRev1Stage1Submitted || isRev2Stage1Submitted) ? (
+                    <span
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5"
+                      title="Stage 2 cannot be enabled until all assigned reviewers submit their Stage 1 feedback."
+                    >
+                      <Clock className="w-3.5 h-3.5 text-amber-600" />
+                      Awaiting Donor Reviewer {isRev1Stage1Submitted ? '2' : '1'} Feedback for Stage 2
+                    </span>
+                  ) : null
+                )}
+
+                {/* Request Revision / Consolidated Review */}
+                {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Requested', 'Revision Submitted'].includes(manuscript.status) && (
+                  canMergeConsolidatedFeedback ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsRevisionModalOpen(true);
+                        if (!revisionComments) {
+                          handleAutoMergeReviews();
+                        }
+                      }}
+                      className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-slate-950" />
+                      <span>
+                        {hasDualReviewers ? 'Review & Merge Consolidated Feedback (2/2 Ready)' : 'Request Author Revisions'}
+                      </span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled
+                      className="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-400 font-bold text-xs rounded-xl shadow-none flex items-center gap-1.5 cursor-not-allowed opacity-75"
+                      title={
+                        hasSentConsolidatedFeedback
+                          ? !hasAuthorResubmitted
+                            ? "Consolidated feedback sent to author. Waiting for author to resubmit revised paper before next review cycle."
+                            : !manuscript.stage2EnabledByEditor
+                            ? "Consolidated feedback sent & author resubmission received. Enable Stage 2 Review to allow reviewers to submit next-cycle feedback."
+                            : `Consolidated feedback sent. Waiting for new reviewer evaluations for next review cycle (${isRev1NewSubmitted || isRev2NewSubmitted ? '1/2' : '0/2'} submitted).`
+                          : "Dual review policy: Both reviewers must submit feedback before consolidated review can be sent to author."
+                      }
+                    >
+                      <Clock className="w-3.5 h-3.5 text-slate-400" />
+                      <span>
+                        {hasSentConsolidatedFeedback
+                          ? !hasAuthorResubmitted
+                            ? 'Consolidated Feedback Sent (Awaiting Author Resubmission)'
+                            : (isRev1NewSubmitted || isRev2NewSubmitted)
+                            ? `Awaiting Reviewer ${isRev1NewSubmitted ? '2' : '1'} Next-Cycle Feedback (1/2)`
+                            : 'Consolidated Feedback Sent (Awaiting Next-Cycle Feedback)'
+                          : `Awaiting Reviewer ${isRev1Stage1Submitted ? '2' : '1'} (${isRev1Stage1Submitted || isRev2Stage1Submitted ? '1/2' : '0/2'} Submitted)`}
+                      </span>
+                    </button>
+                  )
+                )}
+
+                {/* Accept */}
+                {['Under Review', 'Review Completed', 'Revision Submitted'].includes(manuscript.status) && (
+                  <button
+                    type="button"
+                    onClick={handleAccept}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Accept Manuscript</span>
+                  </button>
+                )}
+
+                {/* Publish */}
+                {manuscript.status === 'Accepted' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsPublishModalOpen(true)}
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>Publish Manuscript Online</span>
+                  </button>
+                )}
+
+                {/* View Live on Public Site */}
+                {manuscript.status === 'Published' && (
+                  <button
+                    type="button"
+                    onClick={() => navigate('/published')}
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>View Live on Public Repository</span>
+                  </button>
+                )}
+
+                {/* Reject */}
+                {manuscript.status !== 'Published' && manuscript.status !== 'Rejected' && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRejectModalOpen(true)}
+                    className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                    <span>Reject Manuscript</span>
+                  </button>
+                )}
+              </>
             )}
 
-            {/* Request Revision / Consolidated Review */}
-            {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Requested', 'Revision Submitted'].includes(manuscript.status) && (
-              canMergeConsolidatedFeedback ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsRevisionModalOpen(true);
-                    if (!revisionComments) {
-                      handleAutoMergeReviews();
-                    }
-                  }}
-                  className="px-4 py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <RotateCcw className="w-3.5 h-3.5 text-slate-950" />
-                  <span>
-                    {hasDualReviewers ? 'Review & Merge Consolidated Feedback (2/2 Ready)' : 'Request Author Revisions'}
-                  </span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled
-                  className="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-400 font-bold text-xs rounded-xl shadow-none flex items-center gap-1.5 cursor-not-allowed opacity-75"
-                  title={
-                    hasSentConsolidatedFeedback
-                      ? !hasAuthorResubmitted
-                        ? "Consolidated feedback sent to author. Waiting for author to resubmit revised paper before next review cycle."
-                        : !manuscript.stage2EnabledByEditor
-                        ? "Consolidated feedback sent & author resubmission received. Enable Stage 2 Review to allow reviewers to submit next-cycle feedback."
-                        : `Consolidated feedback sent. Waiting for new reviewer evaluations for next review cycle (${isRev1NewSubmitted || isRev2NewSubmitted ? '1/2' : '0/2'} submitted).`
-                      : "Dual review policy: Both reviewers must submit feedback before consolidated review can be sent to author."
-                  }
-                >
-                  <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  <span>
-                    {hasSentConsolidatedFeedback
-                      ? !hasAuthorResubmitted
-                        ? 'Consolidated Feedback Sent (Awaiting Author Resubmission)'
-                        : (isRev1NewSubmitted || isRev2NewSubmitted)
-                        ? `Awaiting Reviewer ${isRev1NewSubmitted ? '2' : '1'} Next-Cycle Feedback (1/2)`
-                        : 'Consolidated Feedback Sent (Awaiting Next-Cycle Feedback)'
-                      : `Awaiting Reviewer ${isRev1Stage1Submitted ? '2' : '1'} (${isRev1Stage1Submitted || isRev2Stage1Submitted ? '1/2' : '0/2'} Submitted)`}
-                  </span>
-                </button>
-              )
-            )}
-
-            {/* Accept */}
-            {['Under Review', 'Review Completed', 'Revision Submitted'].includes(manuscript.status) && (
-              <button
-                type="button"
-                onClick={handleAccept}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Accept Manuscript</span>
-              </button>
-            )}
-
-            {/* Publish */}
-            {manuscript.status === 'Accepted' && (
+            {/* Terminal Actions (Publish / View live) for completed manuscripts */}
+            {isMaxRevisionsReached && manuscript.status === 'Accepted' && (
               <button
                 type="button"
                 onClick={() => setIsPublishModalOpen(true)}
@@ -588,9 +686,7 @@ export const EditorManuscriptDetails: React.FC = () => {
                 <span>Publish Manuscript Online</span>
               </button>
             )}
-
-            {/* View Live on Public Site */}
-            {manuscript.status === 'Published' && (
+            {isMaxRevisionsReached && manuscript.status === 'Published' && (
               <button
                 type="button"
                 onClick={() => navigate('/published')}
@@ -598,18 +694,6 @@ export const EditorManuscriptDetails: React.FC = () => {
               >
                 <BookOpen className="w-3.5 h-3.5" />
                 <span>View Live on Public Repository</span>
-              </button>
-            )}
-
-            {/* Reject */}
-            {manuscript.status !== 'Published' && manuscript.status !== 'Rejected' && (
-              <button
-                type="button"
-                onClick={() => setIsRejectModalOpen(true)}
-                className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer"
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                <span>Reject</span>
               </button>
             )}
           </div>
@@ -771,13 +855,15 @@ export const EditorManuscriptDetails: React.FC = () => {
               ) : (
                 <div className="p-4 text-center bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
                   <p className="text-slate-500 italic">No reviewers currently assigned.</p>
-                  <button
-                    type="button"
-                    onClick={() => setIsAssignModalOpen(true)}
-                    className="px-3 py-1.5 bg-[#0d3b6e] text-white rounded-lg text-xs font-bold cursor-pointer"
-                  >
-                    Assign 2 Reviewers
-                  </button>
+                  {!isMaxRevisionsReached && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAssignModalOpen(true)}
+                      className="px-3 py-1.5 bg-[#0d3b6e] text-white rounded-lg text-xs font-bold cursor-pointer"
+                    >
+                      Assign 2 Reviewers
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -997,7 +1083,7 @@ export const EditorManuscriptDetails: React.FC = () => {
 
       {/* MODAL: Assign Reviewer */}
       <AssignReviewerModal
-        isOpen={isAssignModalOpen}
+        isOpen={!isMaxRevisionsReached && isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
         manuscriptTitle={manuscript.title}
         manuscriptDomain={manuscript.domain}
@@ -1006,7 +1092,7 @@ export const EditorManuscriptDetails: React.FC = () => {
 
       {/* MODAL: Forward Revisions to Reviewers (Requirement 2) */}
       <Modal
-        isOpen={isForwardModalOpen}
+        isOpen={!isMaxRevisionsReached && isForwardModalOpen}
         onClose={() => setIsForwardModalOpen(false)}
         title="Forward Revisions to Reviewers (Round 2)"
         subtitle={`Manuscript ID: ${manuscript.id} • ${manuscript.title}`}
@@ -1103,7 +1189,7 @@ export const EditorManuscriptDetails: React.FC = () => {
 
       {/* MODAL: Request Revision & Consolidated Review Desk */}
       <Modal
-        isOpen={isRevisionModalOpen}
+        isOpen={!isMaxRevisionsReached && isRevisionModalOpen}
         onClose={() => setIsRevisionModalOpen(false)}
         title={hasDualReviewers ? 'Consolidated Peer Review Desk (Merge & Send to Author)' : 'Pass Comments to Author (Request Revisions)'}
         subtitle={`Manuscript: ${manuscript.id} • ${hasDualReviewers ? (canMergeConsolidatedFeedback ? 'Dual Reviews Completed (2/2)' : hasSentConsolidatedFeedback ? 'Next Review Cycle Pending' : 'Review Status: Incomplete') : 'Single Reviewer'}`}

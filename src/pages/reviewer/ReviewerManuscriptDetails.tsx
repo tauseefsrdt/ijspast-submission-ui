@@ -112,8 +112,10 @@ export const ReviewerManuscriptDetails: React.FC = () => {
         await dispatch(fetchReviewsByManuscript(id));
       }
       setActiveStageForm(null);
+      alert('Your peer review evaluation report has been successfully submitted to the Editor-in-Chief.');
     } catch (err: any) {
       console.error('Review submission error:', err);
+      alert(`Review submission was not completed: ${err || 'Please check that Stage 2 has been enabled and try again.'}`);
     } finally {
       setIsSubmitting(false);
     }

@@ -158,10 +158,11 @@ export const requestManuscriptRevision = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/request-revision`, {
+      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/decision`, {
+        decision: 'REQUEST_REVISION',
         comments: payload.comments,
       });
-      return res.data as Manuscript;
+      return (res.data || res) as Manuscript;
     } catch (e: any) {
       return rejectWithValue(e.message || 'Revision request failed');
     }
@@ -183,7 +184,7 @@ export const forwardRevisionThunk = createAsyncThunk(
         deadlineDays: payload.deadlineDays,
         notes: payload.notes,
       });
-      return res.data as Manuscript;
+      return (res.data || res) as Manuscript;
     } catch (e: any) {
       return rejectWithValue(e.message || 'Forwarding revision to reviewer failed');
     }
@@ -195,7 +196,7 @@ export const enableStage2Thunk = createAsyncThunk(
   async (manuscriptId: string, { rejectWithValue }) => {
     try {
       const res: any = await axiosInstance.post(`/editor/manuscripts/${manuscriptId}/enable-stage2`);
-      return res.data as Manuscript;
+      return (res.data || res) as Manuscript;
     } catch (e: any) {
       return rejectWithValue(e.message || 'Failed to enable Stage 2 review');
     }
@@ -218,7 +219,7 @@ export const submitManuscriptRevision = createAsyncThunk(
         response: payload.response,
         file: payload.file || { name: 'revised-manuscript.pdf', size: 1024, type: 'application/pdf' },
       });
-      return res.data as Manuscript;
+      return (res.data || res) as Manuscript;
     } catch (e: any) {
       return rejectWithValue(e.message || 'Revision submission failed');
     }
@@ -232,10 +233,11 @@ export const acceptManuscriptThunk = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/accept`, {
-        comment: payload.comment,
+      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/decision`, {
+        decision: 'ACCEPT',
+        comments: payload.comment,
       });
-      return res.data as Manuscript;
+      return (res.data || res) as Manuscript;
     } catch (e: any) {
       return rejectWithValue(e.message || 'Manuscript acceptance failed');
     }
@@ -249,10 +251,11 @@ export const rejectManuscriptThunk = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/reject`, {
-        reason: payload.reason,
+      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/decision`, {
+        decision: 'REJECT',
+        rejectionReason: payload.reason,
       });
-      return res.data as Manuscript;
+      return (res.data || res) as Manuscript;
     } catch (e: any) {
       return rejectWithValue(e.message || 'Manuscript rejection failed');
     }
@@ -266,8 +269,11 @@ export const publishManuscriptThunk = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/publish`, payload.details);
-      return res.data as Manuscript;
+      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/decision`, {
+        decision: 'PUBLISH',
+        ...payload.details,
+      });
+      return (res.data || res) as Manuscript;
     } catch (e: any) {
       return rejectWithValue(e.message || 'Manuscript publication failed');
     }

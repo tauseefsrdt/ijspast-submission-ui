@@ -29,7 +29,7 @@ export const PublishedPapersPage: React.FC = () => {
   const filtered = sourceList.filter(
     (m) =>
       m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (m.author?.name && m.author.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       m.domain.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (m.publicationDetails?.doi || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -117,8 +117,8 @@ export const PublishedPapersPage: React.FC = () => {
                 </h3>
 
                 <div className="text-xs text-slate-600 space-y-0.5">
-                  <p className="font-semibold text-slate-800">{m.author.name}</p>
-                  <p className="text-[11px] text-slate-400 truncate">{m.author.institution}</p>
+                  <p className="font-semibold text-slate-800">{m.author?.name || 'Author'}</p>
+                  <p className="text-[11px] text-slate-400 truncate">{m.author?.institution || ''}</p>
                 </div>
 
                 <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">

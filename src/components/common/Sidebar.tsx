@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   // Compute live badges based on authenticated role and manuscripts
   const userManuscripts =
     role === 'author'
-      ? manuscripts.filter((m) => !user?.email || m.author.email.toLowerCase() === user.email.toLowerCase())
+      ? manuscripts.filter((m) => !user?.email || (m.author?.email && m.author.email.toLowerCase() === user.email.toLowerCase()))
       : manuscripts;
 
   const submittedCount = userManuscripts.filter((m) => m.status === 'Submitted').length;
@@ -38,13 +38,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     (m) => m.status === 'Under Review' || m.status === 'Reviewer Assigned'
   ).length;
   const authorRevisionCount = manuscripts.filter(
-    (m) => m.status === 'Revision Requested' && (!user?.email || m.author.email.toLowerCase() === user.email.toLowerCase())
+    (m) => m.status === 'Revision Requested' && (!user?.email || (m.author?.email && m.author.email.toLowerCase() === user.email.toLowerCase()))
   ).length;
   const reviewerAssignedCount = manuscripts.filter(
     (m) =>
-      (m.status === 'Under Review' || m.status === 'Reviewer Assigned') &&
+      (m.status === 'Under Review' || m.status === 'Reviewer Assigned' || m.status === 'Revision Submitted') &&
       (m.assignedReviewerId === user?.id ||
-        (m.assignedReviewerName && user?.name && m.assignedReviewerName.toLowerCase() === user.name.toLowerCase()))
+        m.assignedReviewer2Id === user?.id ||
+        (m.assignedReviewerName && user?.name && m.assignedReviewerName.toLowerCase() === user.name.toLowerCase()) ||
+        (m.assignedReviewer2Name && user?.name && m.assignedReviewer2Name.toLowerCase() === user.name.toLowerCase()))
   ).length;
 
   const authorNav = [

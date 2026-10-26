@@ -72,8 +72,8 @@ export const ReviewerDirectoryTable: React.FC = () => {
       (p) =>
         p.paperId.toLowerCase().includes(q) ||
         p.paperTitle.toLowerCase().includes(q) ||
-        p.author?.name.toLowerCase().includes(q) ||
-        p.author?.email.toLowerCase().includes(q)
+        (p.author?.name && p.author.name.toLowerCase().includes(q)) ||
+        (p.author?.email && p.author.email.toLowerCase().includes(q))
     );
 
     return matchesDomain && (matchesReviewer || matchesPapersOrAuthors);

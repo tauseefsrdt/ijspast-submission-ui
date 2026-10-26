@@ -382,7 +382,7 @@ export const ReviewersManagementPage: React.FC = () => {
                           </div>
                           <p className="font-bold text-slate-900 leading-snug">{m.title}</p>
                           <div className="flex items-center gap-3 text-[11px] text-slate-500">
-                            <span>Author: {m.author.name}</span>
+                            <span>Author: {m.author?.name || 'Author'}</span>
                             <span>•</span>
                             <span className="italic">{m.domain}</span>
                           </div>

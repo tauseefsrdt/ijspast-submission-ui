@@ -109,26 +109,102 @@ export const EditorManuscriptDetails: React.FC = () => {
         r.reviewerName?.toLowerCase() === manuscript.assignedReviewer2Name.toLowerCase())
   );
 
-  // Only use reviews[0] as fallback for rev1 if no reviewer ID/name match exists but a reviewer IS assigned.
-  // Never fall back to reviews[1] for rev2 — it could be the same reviewer's Stage 2 report.
-  const rev1Final = rev1Reports.length > 0
-    ? (rev1Reports.find(r => r.stage === 2) || rev1Reports[0])
-    : (hasReviewer1 && rev2Reports.length === 0 && reviews.length >= 1 ? reviews[0] : null);
+  // Workflow tracking: Check if consolidated feedback has already been sent to the author
+  const lastRevisionRequested = [...(manuscript.history || [])]
+    .reverse()
+    .find((h) => h.status === 'Revision Requested');
+  const hasSentConsolidatedFeedback = Boolean(
+    manuscript.revisionRequestComments ||
+    lastRevisionRequested ||
+    manuscript.status === 'Revision Requested'
+  );
 
-  // rev2Final must only come from reports actually matched to the second assigned reviewer.
-  // Do NOT fall back to reviews[1] — that may be the first reviewer's Stage 2 report.
-  const rev2Final = rev2Reports.length > 0
-    ? (rev2Reports.find(r => r.stage === 2) || rev2Reports[0])
-    : null;
+  // Workflow tracking: Check if the author has resubmitted the revised paper
+  const hasAuthorResubmitted = Boolean(
+    manuscript.status === 'Revision Submitted' ||
+    (manuscript.authorRevisionResponse && manuscript.authorRevisionResponse.trim().length > 0) ||
+    (manuscript.revisedFiles && manuscript.revisedFiles.length > 0) ||
+    manuscript.history?.some((h) => h.status === 'Revision Submitted')
+  );
+
+  // Stage 1 initial evaluation reports
+  const rev1Stage1 = rev1Reports.find((r) => r.stage === 1 || (!r.stage && rev1Reports.length === 1)) || rev1Reports[0] || (hasReviewer1 && rev2Reports.length === 0 && reviews.length >= 1 ? reviews[0] : null);
+  const rev2Stage1 = rev2Reports.find((r) => r.stage === 1 || (!r.stage && rev2Reports.length === 1)) || rev2Reports[0] || null;
+
+  const isRev1Stage1Submitted = Boolean(rev1Stage1);
+  const isRev2Stage1Submitted = Boolean(rev2Stage1);
+  const bothStage1Submitted = hasDualReviewers
+    ? (isRev1Stage1Submitted && isRev2Stage1Submitted)
+    : isRev1Stage1Submitted;
+
+  // Next-cycle / Stage 2 reports (new reviewer feedback submitted for next cycle)
+  const rev1NewReport = rev1Reports.find((r) => {
+    if ((r.stage && r.stage >= 2) || (r as any).round >= 2) return true;
+    if (lastRevisionRequested?.date && r.submittedAt) {
+      return new Date(r.submittedAt).getTime() > new Date(lastRevisionRequested.date).getTime();
+    }
+    return false;
+  });
+  const rev2NewReport = rev2Reports.find((r) => {
+    if ((r.stage && r.stage >= 2) || (r as any).round >= 2) return true;
+    if (lastRevisionRequested?.date && r.submittedAt) {
+      return new Date(r.submittedAt).getTime() > new Date(lastRevisionRequested.date).getTime();
+    }
+    return false;
+  });
+
+  const isRev1NewSubmitted = Boolean(rev1NewReport);
+  const isRev2NewSubmitted = Boolean(rev2NewReport);
+  const bothNewReportsSubmitted = hasDualReviewers
+    ? (isRev1NewSubmitted && isRev2NewSubmitted)
+    : isRev1NewSubmitted;
+
+  // Active reports for consolidated review synthesis
+  const rev1Final = hasSentConsolidatedFeedback ? (rev1NewReport || rev1Stage1) : rev1Stage1;
+  const rev2Final = hasSentConsolidatedFeedback ? (rev2NewReport || rev2Stage1) : rev2Stage1;
 
   const isRev1Submitted = Boolean(rev1Final);
   const isRev2Submitted = Boolean(rev2Final);
 
-  // "Both submitted" requires BOTH assigned reviewers to have independently submitted.
-  // Single-reviewer manuscripts are handled separately (no dual-merge button shown).
+  // Both reviewers submitted for active round
   const bothReviewersSubmitted = hasDualReviewers
     ? (isRev1Submitted && isRev2Submitted)
     : isRev1Submitted;
+
+  // Check if Editor has performed either Forward Revisions to Reviewers or Reassign Reviewer
+  const isForwardedOrReassigned = Boolean(
+    manuscript.revisionForwardedToReviewer ||
+    (manuscript as any).reviewerReassignedAfterRevision ||
+    manuscript.history?.some((h) =>
+      h.comment && h.comment.includes('forwarded to peer reviewer')
+    )
+  );
+
+  // Stage 2 actually active only if enabled and (if author resubmitted, editor has forwarded or reassigned)
+  const isStage2ActuallyActive = Boolean(
+    manuscript.stage2EnabledByEditor &&
+    (!hasAuthorResubmitted || isForwardedOrReassigned)
+  );
+
+  // Enable Stage 2 Review requires:
+  // 1. Both reviewers submitted their Stage 1 feedback
+  // 2. Editor clicked Review & Merge Consolidated Feedback, merged, and sent to author
+  // 3. Author resubmitted the revised paper
+  // 4. Editor performed either Forward Revisions to Reviewers or Reassign Reviewer
+  // 5. Stage 2 has not already been enabled
+  const canEnableStage2 =
+    bothStage1Submitted &&
+    hasSentConsolidatedFeedback &&
+    hasAuthorResubmitted &&
+    isForwardedOrReassigned &&
+    !isStage2ActuallyActive;
+
+  // Consolidated Feedback Button requires:
+  // - In Initial Cycle (!hasSentConsolidatedFeedback): Both reviewers have submitted Stage 1
+  // - In Next Cycle (hasSentConsolidatedFeedback): Both reviewers have submitted NEW feedback for the next review cycle
+  const canMergeConsolidatedFeedback = !hasSentConsolidatedFeedback
+    ? bothStage1Submitted
+    : bothNewReportsSubmitted;
 
   const handleAutoMergeReviews = () => {
     let merged = `=== CONSOLIDATED EDITORIAL PEER REVIEW REPORT ===\n`;
@@ -189,15 +265,24 @@ export const EditorManuscriptDetails: React.FC = () => {
 
   const handleConfirmRevision = async () => {
     if (!revisionComments.trim()) return;
-    await dispatch(
-      requestManuscriptRevision({
-        manuscriptId: manuscript.id,
-        comments: revisionComments.trim(),
-        editorName: user?.name || 'Editor-in-Chief',
-      })
-    );
-    setIsRevisionModalOpen(false);
-    setRevisionComments('');
+    try {
+      await dispatch(
+        requestManuscriptRevision({
+          manuscriptId: manuscript.id,
+          comments: revisionComments.trim(),
+          editorName: user?.name || 'Editor-in-Chief',
+        })
+      ).unwrap();
+      setIsRevisionModalOpen(false);
+      setRevisionComments('');
+      if (id) {
+        await dispatch(fetchManuscriptById(id));
+        await dispatch(fetchReviewsByManuscript(id));
+      }
+    } catch (err: any) {
+      console.error('Failed to dispatch consolidated feedback:', err);
+      alert(typeof err === 'string' ? err : err?.message || 'Failed to dispatch consolidated feedback to author.');
+    }
   };
 
   const handleConfirmForwardRevision = async () => {
@@ -224,35 +309,56 @@ export const EditorManuscriptDetails: React.FC = () => {
 
   const handleConfirmReject = async () => {
     if (!rejectionReason.trim()) return;
-    await dispatch(
-      rejectManuscriptThunk({
-        manuscriptId: manuscript.id,
-        reason: rejectionReason.trim(),
-        editorName: user?.name || 'Editor-in-Chief',
-      })
-    );
-    setIsRejectModalOpen(false);
-    setRejectionReason('');
+    try {
+      await dispatch(
+        rejectManuscriptThunk({
+          manuscriptId: manuscript.id,
+          reason: rejectionReason.trim(),
+          editorName: user?.name || 'Editor-in-Chief',
+        })
+      ).unwrap();
+      setIsRejectModalOpen(false);
+      setRejectionReason('');
+      if (id) {
+        await dispatch(fetchManuscriptById(id));
+      }
+    } catch (err: any) {
+      console.error('Failed to reject manuscript:', err);
+    }
   };
 
   const handleConfirmPublish = async () => {
-    await dispatch(
-      publishManuscriptThunk({
-        manuscriptId: manuscript.id,
-        details: publishForm,
-        editorName: user?.name || 'Editor-in-Chief',
-      })
-    );
-    setIsPublishModalOpen(false);
+    try {
+      await dispatch(
+        publishManuscriptThunk({
+          manuscriptId: manuscript.id,
+          details: publishForm,
+          editorName: user?.name || 'Editor-in-Chief',
+        })
+      ).unwrap();
+      setIsPublishModalOpen(false);
+      if (id) {
+        await dispatch(fetchManuscriptById(id));
+      }
+    } catch (err: any) {
+      console.error('Failed to publish manuscript:', err);
+    }
   };
 
   const handleAccept = async () => {
-    await dispatch(
-      acceptManuscriptThunk({
-        manuscriptId: manuscript.id,
-        editorName: user?.name || 'Editor-in-Chief',
-      })
-    );
+    try {
+      await dispatch(
+        acceptManuscriptThunk({
+          manuscriptId: manuscript.id,
+          editorName: user?.name || 'Editor-in-Chief',
+        })
+      ).unwrap();
+      if (id) {
+        await dispatch(fetchManuscriptById(id));
+      }
+    } catch (err: any) {
+      console.error('Failed to accept manuscript:', err);
+    }
   };
 
   return (
@@ -309,10 +415,10 @@ export const EditorManuscriptDetails: React.FC = () => {
             <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
               Corresponding Author
             </span>
-            <p className="font-bold text-slate-900">{manuscript.author.name}</p>
-            <p className="text-slate-500 truncate">{manuscript.author.institution}</p>
-            <p className="font-mono text-[11px] text-slate-500 truncate">{manuscript.author.email}</p>
-            {manuscript.author.orcid && (
+            <p className="font-bold text-slate-900">{manuscript.author?.name || 'Author'}</p>
+            <p className="text-slate-500 truncate">{manuscript.author?.institution || 'Institution'}</p>
+            <p className="font-mono text-[11px] text-slate-500 truncate">{manuscript.author?.email || 'N/A'}</p>
+            {manuscript.author?.orcid && (
               <p className="text-[10px] text-indigo-600 font-mono">ORCID: {manuscript.author.orcid}</p>
             )}
           </div>
@@ -353,65 +459,73 @@ export const EditorManuscriptDetails: React.FC = () => {
               </button>
             )}
 
-            {/* Enable Stage 2 Review — requires ALL assigned reviewers (donor reviewers) to have submitted Stage 1 feedback */}
-            {['Under Review', 'Review Completed', 'Editor Assessment'].includes(manuscript.status) &&
-              bothReviewersSubmitted &&
-              !manuscript.stage2EnabledByEditor && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await dispatch(enableStage2Thunk(manuscript.id));
-                    if (id) await dispatch(fetchManuscriptById(id));
-                  }}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Enable Stage 2 Review</span>
-                </button>
-              )}
-
-            {/* Stage 2 blocked — donor reviewer feedback not yet submitted */}
-            {['Under Review', 'Review Completed', 'Editor Assessment'].includes(manuscript.status) &&
-              !bothReviewersSubmitted &&
-              (isRev1Submitted || isRev2Submitted) &&
-              !manuscript.stage2EnabledByEditor && (
+            {/* Enable Stage 2 Review / Stage 2 Enabled indicator */}
+            {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Requested', 'Revision Submitted'].includes(manuscript.status) && (
+              isStage2ActuallyActive ? (
+                <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  Stage 2 Enabled
+                </span>
+              ) : bothStage1Submitted ? (
+                canEnableStage2 ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await dispatch(enableStage2Thunk(manuscript.id)).unwrap();
+                        if (id) await dispatch(fetchManuscriptById(id));
+                      } catch (err: any) {
+                        alert(typeof err === 'string' ? err : err?.message || 'Failed to enable Stage 2 review.');
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title="Enable Stage 2 Final Evaluation for assigned reviewers"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Enable Stage 2 Review</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-400 font-bold text-xs rounded-xl shadow-none flex items-center gap-1.5 cursor-not-allowed opacity-75"
+                    title={
+                      !hasSentConsolidatedFeedback
+                        ? "Stage 2 Review disabled: Editor must first review & merge consolidated feedback and dispatch to author."
+                        : !hasAuthorResubmitted
+                        ? "Stage 2 Review disabled: Waiting for author to resubmit the revised manuscript."
+                        : !isForwardedOrReassigned
+                        ? "Stage 2 Review disabled: Editor must first perform either 'Forward Revisions to Reviewers' or 'Reassign Reviewer'."
+                        : "Stage 2 Review disabled: Workflow prerequisites not met."
+                    }
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-slate-400" />
+                    <span>
+                      {hasAuthorResubmitted && !isForwardedOrReassigned
+                        ? 'Stage 2 (Awaiting Forward / Reassign)'
+                        : 'Enable Stage 2 Review'}
+                    </span>
+                  </button>
+                )
+              ) : (isRev1Stage1Submitted || isRev2Stage1Submitted) ? (
                 <span
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5"
-                  title="Stage 2 cannot be enabled until all assigned reviewers (donor reviewers) submit their Stage 1 feedback."
+                  title="Stage 2 cannot be enabled until all assigned reviewers submit their Stage 1 feedback."
                 >
                   <Clock className="w-3.5 h-3.5 text-amber-600" />
-                  Awaiting Donor Reviewer {isRev1Submitted ? '2' : '1'} Feedback for Stage 2
+                  Awaiting Donor Reviewer {isRev1Stage1Submitted ? '2' : '1'} Feedback for Stage 2
                 </span>
-              )}
-
-            {/* Stage 2 Already Enabled indicator */}
-            {manuscript.stage2EnabledByEditor && (
-              <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                Stage 2 Enabled
-              </span>
+              ) : null
             )}
 
             {/* Request Revision / Consolidated Review */}
-            {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Submitted'].includes(manuscript.status) && (
-              hasDualReviewers && !bothReviewersSubmitted ? (
-                <button
-                  type="button"
-                  onClick={() => setIsRevisionModalOpen(true)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                  title="Dual review policy: Both reviewers must submit feedback before consolidated review can be sent to author."
-                >
-                  <Clock className="w-3.5 h-3.5 text-amber-600" />
-                  <span>
-                    Awaiting Reviewer {isRev1Submitted ? '2' : '1'} ({isRev1Submitted || isRev2Submitted ? '1/2' : '0/2'} Submitted)
-                  </span>
-                </button>
-              ) : (
+            {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Requested', 'Revision Submitted'].includes(manuscript.status) && (
+              canMergeConsolidatedFeedback ? (
                 <button
                   type="button"
                   onClick={() => {
                     setIsRevisionModalOpen(true);
-                    if (bothReviewersSubmitted && !revisionComments) {
+                    if (!revisionComments) {
                       handleAutoMergeReviews();
                     }
                   }}
@@ -420,6 +534,32 @@ export const EditorManuscriptDetails: React.FC = () => {
                   <RotateCcw className="w-3.5 h-3.5 text-slate-950" />
                   <span>
                     {hasDualReviewers ? 'Review & Merge Consolidated Feedback (2/2 Ready)' : 'Request Author Revisions'}
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-400 font-bold text-xs rounded-xl shadow-none flex items-center gap-1.5 cursor-not-allowed opacity-75"
+                  title={
+                    hasSentConsolidatedFeedback
+                      ? !hasAuthorResubmitted
+                        ? "Consolidated feedback sent to author. Waiting for author to resubmit revised paper before next review cycle."
+                        : !manuscript.stage2EnabledByEditor
+                        ? "Consolidated feedback sent & author resubmission received. Enable Stage 2 Review to allow reviewers to submit next-cycle feedback."
+                        : `Consolidated feedback sent. Waiting for new reviewer evaluations for next review cycle (${isRev1NewSubmitted || isRev2NewSubmitted ? '1/2' : '0/2'} submitted).`
+                      : "Dual review policy: Both reviewers must submit feedback before consolidated review can be sent to author."
+                  }
+                >
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  <span>
+                    {hasSentConsolidatedFeedback
+                      ? !hasAuthorResubmitted
+                        ? 'Consolidated Feedback Sent (Awaiting Author Resubmission)'
+                        : (isRev1NewSubmitted || isRev2NewSubmitted)
+                        ? `Awaiting Reviewer ${isRev1NewSubmitted ? '2' : '1'} Next-Cycle Feedback (1/2)`
+                        : 'Consolidated Feedback Sent (Awaiting Next-Cycle Feedback)'
+                      : `Awaiting Reviewer ${isRev1Stage1Submitted ? '2' : '1'} (${isRev1Stage1Submitted || isRev2Stage1Submitted ? '1/2' : '0/2'} Submitted)`}
                   </span>
                 </button>
               )
@@ -966,7 +1106,7 @@ export const EditorManuscriptDetails: React.FC = () => {
         isOpen={isRevisionModalOpen}
         onClose={() => setIsRevisionModalOpen(false)}
         title={hasDualReviewers ? 'Consolidated Peer Review Desk (Merge & Send to Author)' : 'Pass Comments to Author (Request Revisions)'}
-        subtitle={`Manuscript: ${manuscript.id} • ${hasDualReviewers ? (bothReviewersSubmitted ? 'Dual Reviews Completed (2/2)' : 'Review Status: Incomplete') : 'Single Reviewer'}`}
+        subtitle={`Manuscript: ${manuscript.id} • ${hasDualReviewers ? (canMergeConsolidatedFeedback ? 'Dual Reviews Completed (2/2)' : hasSentConsolidatedFeedback ? 'Next Review Cycle Pending' : 'Review Status: Incomplete') : 'Single Reviewer'}`}
         size="lg"
       >
         <div className="space-y-4 text-xs">
@@ -978,22 +1118,34 @@ export const EditorManuscriptDetails: React.FC = () => {
             </p>
           </div>
 
-          {/* Dual Reviewer Wait Barrier if only one reviewer has submitted */}
-          {hasDualReviewers && !bothReviewersSubmitted && (
+          {/* Dual Reviewer Wait Barrier if reviewers have not completed the current cycle */}
+          {hasDualReviewers && !canMergeConsolidatedFeedback && (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
               <div className="flex items-center gap-2 font-bold text-amber-950 text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Editorial Hold: Waiting for Second Reviewer Feedback</span>
+                <span>
+                  {hasSentConsolidatedFeedback
+                    ? 'Consolidated Feedback Sent: Waiting for Next Review Cycle Feedback'
+                    : 'Editorial Hold: Waiting for Second Reviewer Feedback'}
+                </span>
               </div>
               <p className="text-amber-900 leading-relaxed text-[11px]">
-                <strong>Policy Requirement:</strong> The Editor must not send consolidated feedback to the Author until both reviewers have submitted their feedback. Because only <strong>{isRev1Submitted || isRev2Submitted ? '1 of 2 reviewers' : '0 of 2 reviewers'}</strong> has submitted so far, you must wait for the second reviewer to submit before merging and dispatching consolidated feedback.
+                {hasSentConsolidatedFeedback ? (
+                  <>
+                    <strong>Policy Requirement:</strong> Consolidated feedback has already been sent to the Author. Under journal protocol, this button is disabled until both Reviewer 1 and Reviewer 2 submit their new evaluations for the next review cycle (Stage 2 / Round 2). Current progress: <strong>{isRev1NewSubmitted && isRev2NewSubmitted ? '2 of 2' : (isRev1NewSubmitted || isRev2NewSubmitted ? '1 of 2' : '0 of 2')}</strong> submitted.
+                  </>
+                ) : (
+                  <>
+                    <strong>Policy Requirement:</strong> The Editor must not send consolidated feedback to the Author until both reviewers have submitted their feedback. Because only <strong>{isRev1Stage1Submitted || isRev2Stage1Submitted ? '1 of 2 reviewers' : '0 of 2 reviewers'}</strong> has submitted so far, you must wait for the second reviewer to submit before merging and dispatching consolidated feedback.
+                  </>
+                )}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <div className={`p-3 rounded-lg border ${isRev1Submitted ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-amber-200 text-amber-900'}`}>
+                <div className={`p-3 rounded-lg border ${(hasSentConsolidatedFeedback ? isRev1NewSubmitted : isRev1Stage1Submitted) ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-amber-200 text-amber-900'}`}>
                   <span className="font-bold block text-[11px]">Reviewer 1 ({manuscript.assignedReviewerName || 'Primary'}):</span>
                   <div className="flex items-center gap-1.5 mt-1">
-                    {isRev1Submitted ? (
+                    {(hasSentConsolidatedFeedback ? isRev1NewSubmitted : isRev1Stage1Submitted) ? (
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Feedback Submitted ({rev1Final?.recommendation})</span>
@@ -1007,10 +1159,10 @@ export const EditorManuscriptDetails: React.FC = () => {
                   </div>
                 </div>
 
-                <div className={`p-3 rounded-lg border ${isRev2Submitted ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-amber-200 text-amber-900'}`}>
+                <div className={`p-3 rounded-lg border ${(hasSentConsolidatedFeedback ? isRev2NewSubmitted : isRev2Stage1Submitted) ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-amber-200 text-amber-900'}`}>
                   <span className="font-bold block text-[11px]">Reviewer 2 ({manuscript.assignedReviewer2Name || 'Secondary'}):</span>
                   <div className="flex items-center gap-1.5 mt-1">
-                    {isRev2Submitted ? (
+                    {(hasSentConsolidatedFeedback ? isRev2NewSubmitted : isRev2Stage1Submitted) ? (
                       <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                         <span>Feedback Submitted ({rev2Final?.recommendation})</span>
@@ -1119,14 +1271,16 @@ export const EditorManuscriptDetails: React.FC = () => {
             </button>
             <button
               type="button"
-              disabled={(hasDualReviewers && !bothReviewersSubmitted) || !revisionComments.trim()}
+              disabled={!canMergeConsolidatedFeedback || !revisionComments.trim()}
               onClick={handleConfirmRevision}
               className="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
             >
               <Send className="w-4 h-4 text-slate-950" />
               <span>
-                {hasDualReviewers && !bothReviewersSubmitted
-                  ? `Waiting for Reviewer ${isRev1Submitted ? '2' : '1'} (Cannot Send)`
+                {!canMergeConsolidatedFeedback
+                  ? hasSentConsolidatedFeedback
+                    ? 'Awaiting Next-Cycle Reviewer Feedback (Cannot Send)'
+                    : `Waiting for Reviewer ${isRev1Stage1Submitted ? '2' : '1'} (Cannot Send)`
                   : 'Dispatch Consolidated Feedback to Author'}
               </span>
             </button>

@@ -1068,18 +1068,56 @@ export const EditorDashboard: React.FC = () => {
                 const hasRev2 = Boolean(selectedManuscriptForDossier.assignedReviewer2Name || selectedManuscriptForDossier.assignedReviewer2Id);
                 const dual = hasRev1 && hasRev2;
 
-                const r1Done = dossierReviews.some(
+                const lastReq = [...(selectedManuscriptForDossier.history || [])]
+                  .reverse()
+                  .find((h) => h.status === 'Revision Requested');
+                const hasSent = Boolean(
+                  selectedManuscriptForDossier.revisionRequestComments ||
+                  lastReq ||
+                  selectedManuscriptForDossier.status === 'Revision Requested'
+                );
+
+                const r1Stage1 = dossierReviews.some(
                   (r) =>
                     (selectedManuscriptForDossier.assignedReviewerId && r.reviewerId === selectedManuscriptForDossier.assignedReviewerId) ||
                     (selectedManuscriptForDossier.assignedReviewerName && r.reviewerName?.toLowerCase() === selectedManuscriptForDossier.assignedReviewerName.toLowerCase())
                 );
-                const r2Done = dossierReviews.some(
+                const r2Stage1 = dossierReviews.some(
                   (r) =>
                     (selectedManuscriptForDossier.assignedReviewer2Id && r.reviewerId === selectedManuscriptForDossier.assignedReviewer2Id) ||
                     (selectedManuscriptForDossier.assignedReviewer2Name && r.reviewerName?.toLowerCase() === selectedManuscriptForDossier.assignedReviewer2Name.toLowerCase())
                 );
 
-                if (dual && r1Done && r2Done) {
+                const r1NextDone = dossierReviews.some(
+                  (r) =>
+                    ((selectedManuscriptForDossier.assignedReviewerId && r.reviewerId === selectedManuscriptForDossier.assignedReviewerId) ||
+                    (selectedManuscriptForDossier.assignedReviewerName && r.reviewerName?.toLowerCase() === selectedManuscriptForDossier.assignedReviewerName.toLowerCase())) &&
+                    ((r.stage && r.stage >= 2) || (r as any).round >= 2)
+                );
+                const r2NextDone = dossierReviews.some(
+                  (r) =>
+                    ((selectedManuscriptForDossier.assignedReviewer2Id && r.reviewerId === selectedManuscriptForDossier.assignedReviewer2Id) ||
+                    (selectedManuscriptForDossier.assignedReviewer2Name && r.reviewerName?.toLowerCase() === selectedManuscriptForDossier.assignedReviewer2Name.toLowerCase())) &&
+                    ((r.stage && r.stage >= 2) || (r as any).round >= 2)
+                );
+
+                const readyToConsolidate = !hasSent ? (r1Stage1 && r2Stage1) : (r1NextDone && r2NextDone);
+
+                if (dual && hasSent && !readyToConsolidate) {
+                  return (
+                    <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5 text-xs text-slate-700">
+                      <div className="flex items-center gap-2 font-bold text-slate-800">
+                        <Clock className="w-4 h-4 text-slate-600 shrink-0" />
+                        <span>Consolidated Feedback Dispatched to Author</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">
+                        Consolidated feedback has been dispatched to the author. Next cycle feedback will unlock when both reviewers submit their new evaluations (Stage 2 / Round 2). Current progress: {r1NextDone && r2NextDone ? '2 of 2' : (r1NextDone || r2NextDone ? '1 of 2' : '0 of 2')} submitted.
+                      </p>
+                    </div>
+                  );
+                }
+
+                if (dual && readyToConsolidate) {
                   return (
                     <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2 text-emerald-950 font-bold">
@@ -1101,15 +1139,15 @@ export const EditorDashboard: React.FC = () => {
                   );
                 }
 
-                if (dual && (!r1Done || !r2Done)) {
+                if (dual && (!r1Stage1 || !r2Stage1)) {
                   return (
                     <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-1.5 text-xs text-amber-950">
                       <div className="flex items-center gap-2 font-bold text-amber-900">
                         <Clock className="w-4 h-4 text-amber-600 shrink-0" />
-                        <span>Awaiting Second Reviewer Feedback ({r1Done || r2Done ? '1 of 2 submitted' : '0 of 2 submitted'})</span>
+                        <span>Awaiting Second Reviewer Feedback ({r1Stage1 || r2Stage1 ? '1 of 2 submitted' : '0 of 2 submitted'})</span>
                       </div>
                       <p className="text-[11px] text-amber-800 leading-relaxed">
-                        Under journal workflow protocol, the Editor must not send consolidated feedback to the Author until both Reviewer 1 and Reviewer 2 have submitted their feedback. You must wait for Reviewer {r1Done ? '2' : '1'} before dispatching consolidated feedback.
+                        Under journal workflow protocol, the Editor must not send consolidated feedback to the Author until both Reviewer 1 and Reviewer 2 have submitted their feedback. You must wait for Reviewer {r1Stage1 ? '2' : '1'} before dispatching consolidated feedback.
                       </p>
                     </div>
                   );

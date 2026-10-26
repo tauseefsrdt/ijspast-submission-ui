@@ -48,6 +48,9 @@ export const submitReviewReport = createAsyncThunk(
         confidentialComments?: string;
         stage?: number;
         stageName?: string;
+        rubricScores?: number[];
+        overallScore?: number;
+        round?: number;
       };
     },
     { rejectWithValue }
@@ -63,10 +66,14 @@ export const submitReviewReport = createAsyncThunk(
         confidentialComments: payload.report.confidentialComments,
         stage: payload.report.stage || 1,
         stageName: payload.report.stageName,
+        rubricScores: payload.report.rubricScores,
+        overallScore: payload.report.overallScore,
+        round: payload.report.round || (payload.report.stage === 3 ? 2 : (payload.report.stage === 2 ? 2 : 1)),
       });
       return res.data as ReviewReport;
     } catch (e: any) {
-      return rejectWithValue(e.message || 'Review submission failed');
+      const msg = e.response?.data?.message || e.message || 'Review submission failed';
+      return rejectWithValue(msg);
     }
   }
 );

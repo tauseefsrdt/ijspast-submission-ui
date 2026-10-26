@@ -1,5 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 import { X, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
+
+export interface ModalProps {
+  isOpen: boolean;
+  onClose?: () => void;
+  title?: string;
+  subtitle?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '4xl';
+  wide?: boolean;
+  children: ReactNode;
+}
 
 export function Modal({
   isOpen,
@@ -9,9 +19,9 @@ export function Modal({
   size = 'md',
   wide = false,
   children,
-}) {
+}: ModalProps) {
   useEffect(() => {
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose?.();
     };
     if (isOpen) {
@@ -26,13 +36,16 @@ export function Modal({
 
   if (!isOpen) return null;
 
-  const sizeClasses = {
+  const sizeClasses: Record<string, string> = {
     sm: 'max-w-md',
     md: 'max-w-xl',
     lg: 'max-w-2xl',
     xl: 'max-w-3xl',
     '4xl': 'max-w-4xl',
-  }[wide ? '4xl' : size] || 'max-w-xl';
+  };
+
+  const selectedSize = wide ? '4xl' : size;
+  const sizeClass = sizeClasses[selectedSize] || 'max-w-xl';
 
   return (
     <div
@@ -42,7 +55,7 @@ export function Modal({
       }}
     >
       <div
-        className={`bg-white text-slate-800 rounded-2xl w-full p-6 shadow-2xl border border-slate-200 my-8 relative animate-in zoom-in-95 duration-150 ${sizeClasses}`}
+        className={`bg-white text-slate-800 rounded-2xl w-full p-6 shadow-2xl border border-slate-200 my-8 relative animate-in zoom-in-95 duration-150 ${sizeClass}`}
         role="dialog"
       >
         {(title || onClose) && (
@@ -69,14 +82,20 @@ export function Modal({
   );
 }
 
-export function Toast({ message, type = 'info', onClose }) {
+export interface ToastProps {
+  message: string | { text: string; type?: 'success' | 'error' | 'info' };
+  type?: 'success' | 'error' | 'info';
+  onClose?: () => void;
+}
+
+export function Toast({ message, type = 'info', onClose }: ToastProps) {
   if (!message) return null;
 
   const isString = typeof message === 'string';
   const text = isString ? message : message.text || '';
   const msgType = !isString && message.type ? message.type : type;
 
-  const typeConfig = {
+  const typeConfig: Record<string, { bg: string; icon: React.ElementType }> = {
     success: {
       bg: 'bg-emerald-900 text-emerald-100 border-emerald-700',
       icon: CheckCircle2,
@@ -89,17 +108,15 @@ export function Toast({ message, type = 'info', onClose }) {
       bg: 'bg-slate-900 text-slate-100 border-slate-700',
       icon: Info,
     },
-  }[msgType] || {
-    bg: 'bg-slate-900 text-slate-100 border-slate-700',
-    icon: Info,
   };
 
-  const Icon = typeConfig.icon;
+  const selectedConfig = typeConfig[msgType] || typeConfig.info;
+  const Icon = selectedConfig.icon;
 
   return (
     <div className="fixed left-1/2 -translate-x-1/2 bottom-6 z-50 animate-in slide-in-from-bottom duration-200">
       <div
-        className={`flex items-center gap-2.5 px-5 py-3 rounded-xl shadow-xl border text-sm font-medium ${typeConfig.bg}`}
+        className={`flex items-center gap-2.5 px-5 py-3 rounded-xl shadow-xl border text-sm font-medium ${selectedConfig.bg}`}
       >
         <Icon className="w-4 h-4 shrink-0 text-white" />
         <span>{text}</span>

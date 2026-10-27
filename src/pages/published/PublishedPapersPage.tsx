@@ -11,9 +11,11 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { EmptyState } from '../../components/common/EmptyState';
+import { useToast } from '../../context/ToastContext';
 
 export const PublishedPapersPage: React.FC = () => {
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const { publishedManuscripts, manuscripts, isLoading } = useAppSelector((state) => state.manuscripts);
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -36,11 +38,12 @@ export const PublishedPapersPage: React.FC = () => {
 
   const handleDownload = async (fileUrl: string | undefined, fileName: string, id: string) => {
     if (!fileUrl) {
-      alert('File not found for this publication');
+      toast.error('File not found for this publication');
       return;
     }
     setDownloadingId(id);
     try {
+      toast.info(`Downloading publication: ${fileName}`);
       await downloadManuscriptFile(fileUrl, fileName);
     } finally {
       setDownloadingId(null);

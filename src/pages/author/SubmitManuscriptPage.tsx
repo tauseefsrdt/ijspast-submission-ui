@@ -20,9 +20,12 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+import { useToast } from '../../context/ToastContext';
+
 export const SubmitManuscriptPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const toast = useToast();
   const { user } = useAppSelector((state) => state.auth);
   const { isLoading, submissionSuccess } = useAppSelector((state) => state.manuscripts);
   const [copied, setCopied] = useState(false);
@@ -39,6 +42,7 @@ export const SubmitManuscriptPage: React.FC = () => {
   const handleCopyCredentials = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
+    toast.success('Author credentials copied to clipboard!');
     setTimeout(() => setCopied(false), 2500);
   };
 

@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useFormik } from 'formik';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchReviewers, createNewReviewer } from '../../store/slices/reviewerSlice';
 import { Modal } from '../common/Modal';
 import { ReviewerProfile } from '../../types/user.types';
 import { Users, Plus, Shield, CheckCircle2, UserCheck, AlertTriangle } from 'lucide-react';
+import { reviewerEnrollmentSchema } from '../../utils/validationSchemas';
+import { FormInput } from '../forms/common/FormInput';
+import { useToast } from '../../context/ToastContext';
 
 interface AssignReviewerModalProps {
   isOpen: boolean;
@@ -26,6 +30,7 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
   onAssign,
 }) => {
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const { reviewers } = useAppSelector((state) => state.reviewers);
 
   const [reviewer1Id, setReviewer1Id] = useState('');
@@ -37,14 +42,6 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
     password: string;
     name: string;
   } | null>(null);
-
-  const [newReviewerForm, setNewReviewerForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    institution: '',
-    domain: manuscriptDomain || 'Applied Science, Physics & Sensor Calibration',
-  });
 
   useEffect(() => {
     if (isOpen) {
@@ -76,54 +73,70 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
     }
   }, [reviewers, manuscriptDomain, reviewer1Id, reviewer2Id]);
 
-  const handleCreateAndAssign = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newReviewerForm.name.trim() || !newReviewerForm.email.trim()) return;
+  // Formik for new reviewer enrollment
+  const createReviewerFormik = useFormik({
+    initialValues: {
+      name: '',
+      email: '',
+      phone: '',
+      institution: '',
+      domain: manuscriptDomain || 'Applied Science, Physics & Sensor Calibration',
+    },
+    validationSchema: reviewerEnrollmentSchema,
+    onSubmit: async (values, { resetForm }) => {
+      try {
+        const res = await dispatch(
+          createNewReviewer({
+            name: values.name.trim(),
+            email: values.email.trim(),
+            phone: values.phone.trim(),
+            institution: values.institution.trim() || 'Research Institute',
+            domain: values.domain.trim(),
+          })
+        ).unwrap();
 
-    try {
-      const res = await dispatch(
-        createNewReviewer({
-          name: newReviewerForm.name.trim(),
-          email: newReviewerForm.email.trim(),
-          phone: newReviewerForm.phone.trim(),
-          institution: newReviewerForm.institution.trim() || 'Research Institute',
-          domain: newReviewerForm.domain,
-        })
-      ).unwrap();
-
-      if (res?.credentials) {
-        setCreatedCredentials({
-          name: res.reviewer?.name || newReviewerForm.name,
-          email: res.credentials.email,
-          password: res.credentials.password,
-        });
-      }
-
-      if (res?.reviewer) {
-        if (targetSlot === 1) {
-          setReviewer1Id(res.reviewer.id);
-        } else {
-          setReviewer2Id(res.reviewer.id);
+        if (res?.credentials) {
+          setCreatedCredentials({
+            name: res.reviewer?.name || values.name,
+            email: res.credentials.email,
+            password: res.credentials.password,
+          });
         }
-      }
-      setIsCreatingNew(false);
-    } catch (err: any) {
-      console.error('Error creating reviewer:', err);
-    }
-  };
 
-  const handleConfirmAssignment = () => {
+        if (res?.reviewer) {
+          if (targetSlot === 1) {
+            setReviewer1Id(res.reviewer.id);
+          } else {
+            setReviewer2Id(res.reviewer.id);
+          }
+        }
+
+        setIsCreatingNew(false);
+        resetForm();
+        toast.success(`Reviewer account enrolled for ${values.name}!`);
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to enroll reviewer. Please try again.');
+      }
+    },
+  });
+
+  const handleConfirmAssignment = async () => {
     const rev1 = reviewers.find((r) => r.id === reviewer1Id);
     const rev2 = reviewers.find((r) => r.id === reviewer2Id);
 
     if (rev1 && rev2 && rev1.id !== rev2.id) {
-      onAssign(rev1.id, rev1.name, rev2.id, rev2.name);
-      onClose();
+      try {
+        await onAssign(rev1.id, rev1.name, rev2.id, rev2.name);
+        toast.success(`Dual reviewers assigned: ${rev1.name} & ${rev2.name}!`);
+        onClose();
+      } catch (err: any) {
+        toast.error(err?.message || 'Assignment failed. Please try again.');
+      }
     }
   };
 
-  const isSameReviewer = reviewer1Id && reviewer2Id && reviewer1Id === reviewer2Id;
-  const canAssign = reviewer1Id && reviewer2Id && !isSameReviewer;
+  const isSameReviewer = Boolean(reviewer1Id && reviewer2Id && reviewer1Id === reviewer2Id);
+  const canAssign = Boolean(reviewer1Id && reviewer2Id && !isSameReviewer);
 
   const rev1 = reviewers.find((r) => r.id === reviewer1Id);
   const rev2 = reviewers.find((r) => r.id === reviewer2Id);
@@ -133,7 +146,7 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Assign Dual Peer Reviewers"
-      subtitle={`Policy Requirement: Assign exactly two expert reviewers for evaluation`}
+      subtitle="Policy Requirement: Assign exactly two expert reviewers for evaluation"
       size="lg"
     >
       {createdCredentials ? (
@@ -172,7 +185,7 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
           </div>
         </div>
       ) : isCreatingNew ? (
-        <form onSubmit={handleCreateAndAssign} className="space-y-4 text-xs">
+        <form onSubmit={createReviewerFormik.handleSubmit} className="space-y-4 text-xs" noValidate>
           <div className="flex items-center justify-between border-b border-slate-100 pb-2">
             <h4 className="font-bold text-slate-800">
               Enroll New Reviewer for Slot {targetSlot} (Reviewer {targetSlot})
@@ -186,66 +199,72 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
             </button>
           </div>
 
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">Full Name *</label>
-            <input
-              type="text"
-              required
-              value={newReviewerForm.name}
-              onChange={(e) => setNewReviewerForm({ ...newReviewerForm, name: e.target.value })}
-              placeholder="e.g. Dr. Harish Chandra"
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-            />
-          </div>
+          <FormInput
+            label="Full Name"
+            required
+            id="name"
+            name="name"
+            placeholder="e.g. Dr. Harish Chandra"
+            value={createReviewerFormik.values.name}
+            onChange={createReviewerFormik.handleChange}
+            onBlur={createReviewerFormik.handleBlur}
+            error={createReviewerFormik.errors.name}
+            touched={createReviewerFormik.touched.name}
+          />
 
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">Email Address *</label>
-            <input
-              type="email"
-              required
-              value={newReviewerForm.email}
-              onChange={(e) => setNewReviewerForm({ ...newReviewerForm, email: e.target.value })}
-              placeholder="reviewer@university.edu"
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-            />
-          </div>
+          <FormInput
+            label="Email Address"
+            required
+            type="email"
+            id="email"
+            name="email"
+            placeholder="reviewer@university.edu"
+            value={createReviewerFormik.values.email}
+            onChange={createReviewerFormik.handleChange}
+            onBlur={createReviewerFormik.handleBlur}
+            error={createReviewerFormik.errors.email}
+            touched={createReviewerFormik.touched.email}
+          />
 
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Institution</label>
-              <input
-                type="text"
-                value={newReviewerForm.institution}
-                onChange={(e) =>
-                  setNewReviewerForm({ ...newReviewerForm, institution: e.target.value })
-                }
-                placeholder="e.g. Indian Institute of Science"
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-              />
-            </div>
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
-              <input
-                type="text"
-                value={newReviewerForm.phone}
-                onChange={(e) =>
-                  setNewReviewerForm({ ...newReviewerForm, phone: e.target.value })
-                }
-                placeholder="+91 9876543210"
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-              />
-            </div>
-          </div>
+            <FormInput
+              label="Institution"
+              required
+              id="institution"
+              name="institution"
+              placeholder="e.g. Indian Institute of Science"
+              value={createReviewerFormik.values.institution}
+              onChange={createReviewerFormik.handleChange}
+              onBlur={createReviewerFormik.handleBlur}
+              error={createReviewerFormik.errors.institution}
+              touched={createReviewerFormik.touched.institution}
+            />
 
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">Expert Subject Domain *</label>
-            <input
-              type="text"
-              value={newReviewerForm.domain}
-              onChange={(e) => setNewReviewerForm({ ...newReviewerForm, domain: e.target.value })}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
+            <FormInput
+              label="Phone Number"
+              id="phone"
+              name="phone"
+              placeholder="+91 9876543210"
+              value={createReviewerFormik.values.phone}
+              onChange={createReviewerFormik.handleChange}
+              onBlur={createReviewerFormik.handleBlur}
+              error={createReviewerFormik.errors.phone}
+              touched={createReviewerFormik.touched.phone}
             />
           </div>
+
+          <FormInput
+            label="Expert Subject Domain"
+            required
+            id="domain"
+            name="domain"
+            placeholder="e.g. Computer Science & AI"
+            value={createReviewerFormik.values.domain}
+            onChange={createReviewerFormik.handleChange}
+            onBlur={createReviewerFormik.handleBlur}
+            error={createReviewerFormik.errors.domain}
+            touched={createReviewerFormik.touched.domain}
+          />
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
             <button
@@ -257,7 +276,8 @@ export const AssignReviewerModal: React.FC<AssignReviewerModalProps> = ({
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl cursor-pointer"
+              disabled={!createReviewerFormik.isValid}
+              className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl cursor-pointer disabled:opacity-50"
             >
               Generate Account &amp; Set as Reviewer {targetSlot}
             </button>

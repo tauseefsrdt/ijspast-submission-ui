@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useFormik } from 'formik';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { assignManuscriptReviewer } from '../../store/slices/manuscriptSlice';
 import { fetchReviewers, createNewReviewer } from '../../store/slices/reviewerSlice';
@@ -8,6 +9,9 @@ import { Modal } from '../../components/common/Modal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { EditReviewerModal } from '../../components/modals/EditReviewerModal';
 import { DeleteReviewerModal } from '../../components/modals/DeleteReviewerModal';
+import { reviewerEnrollmentSchema } from '../../utils/validationSchemas';
+import { FormInput } from '../../components/forms/common/FormInput';
+import { useToast } from '../../context/ToastContext';
 import {
   Users,
   Search,
@@ -32,6 +36,7 @@ import {
 
 export const ReviewersManagementPage: React.FC = () => {
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const { manuscripts } = useAppSelector((state) => state.manuscripts);
   const { reviewers, isLoading } = useAppSelector((state) => state.reviewers);
 
@@ -39,13 +44,7 @@ export const ReviewersManagementPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReviewer, setEditingReviewer] = useState<ReviewerProfile | null>(null);
   const [deletingReviewer, setDeletingReviewer] = useState<ReviewerProfile | null>(null);
-  const [newReviewer, setNewReviewer] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    institution: '',
-    domain: 'Artificial Intelligence and Machine Learning (Computing & AI)',
-  });
+
   const [createdCredentials, setCreatedCredentials] = useState<{
     email: string;
     password: string;
@@ -59,7 +58,6 @@ export const ReviewersManagementPage: React.FC = () => {
   const [deadlineDays, setDeadlineDays] = useState(14);
   const [assignNotes, setAssignNotes] = useState('');
   const [isSubmittingAssign, setIsSubmittingAssign] = useState(false);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(fetchReviewers());
@@ -75,32 +73,35 @@ export const ReviewersManagementPage: React.FC = () => {
     ).length;
   };
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newReviewer.name.trim() || !newReviewer.email.trim()) return;
+  // Formik for new reviewer enrollment
+  const createFormik = useFormik({
+    initialValues: {
+      name: '',
+      email: '',
+      phone: '',
+      institution: '',
+      domain: 'Artificial Intelligence and Machine Learning (Computing & AI)',
+    },
+    validationSchema: reviewerEnrollmentSchema,
+    onSubmit: async (values, { resetForm }) => {
+      try {
+        const result = await dispatch(createNewReviewer(values)).unwrap();
 
-    try {
-      const result = await dispatch(createNewReviewer(newReviewer)).unwrap();
+        if (result?.credentials) {
+          setCreatedCredentials({
+            name: result.reviewer?.name || values.name,
+            email: result.credentials.email,
+            password: result.credentials.password,
+          });
+        }
 
-      if (result?.credentials) {
-        setCreatedCredentials({
-          name: result.reviewer?.name || newReviewer.name,
-          email: result.credentials.email,
-          password: result.credentials.password,
-        });
+        toast.success(`Reviewer "${values.name}" enrolled successfully!`);
+        resetForm();
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to create reviewer. Please try again.');
       }
-
-      setNewReviewer({
-        name: '',
-        email: '',
-        phone: '',
-        institution: '',
-        domain: 'Artificial Intelligence and Machine Learning (Computing & AI)',
-      });
-    } catch (err: any) {
-      console.error('Failed to create reviewer:', err);
-    }
-  };
+    },
+  });
 
   const handleOpenAssignModal = (reviewer: ReviewerProfile) => {
     setSelectedReviewerForAssign(reviewer);
@@ -146,12 +147,12 @@ export const ReviewersManagementPage: React.FC = () => {
       ).unwrap();
 
       const reviewer2Text = secondReviewer ? ` and ${secondReviewer.name}` : '';
-      setSuccessToast(
-        `Successfully assigned ${selectedReviewerForAssign.name}${reviewer2Text} to manuscript "${targetManuscript.id}". Status transitioned to "Under Review". Reviewers notified via email.`
+      toast.success(
+        `Assigned ${selectedReviewerForAssign.name}${reviewer2Text} to manuscript ${targetManuscript.id}`
       );
       setIsAssignModalOpen(false);
     } catch (err: any) {
-      console.error('Assignment error:', err);
+      toast.error(err?.message || 'Assignment failed. Please try again.');
     } finally {
       setIsSubmittingAssign(false);
     }
@@ -166,161 +167,179 @@ export const ReviewersManagementPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
-      {/* Success Notification Banner */}
-      {successToast && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-emerald-900 shadow-xs animate-in slide-in-from-top-2">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-            <p className="text-xs font-semibold">{successToast}</p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setSuccessToast(null)}
-            className="text-emerald-700 hover:text-emerald-900 p-1 rounded-lg hover:bg-emerald-100/50 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* Top Header Card */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#0d3b6e] tracking-tight">
-            Reviewer Directory &amp; Roster
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+              Editorial Board Office
+            </span>
+            <span className="text-xs text-slate-400 font-semibold">•</span>
+            <span className="text-xs text-slate-500 font-semibold">SRMU Peer Review Directory</span>
+          </div>
+          <h1 className="text-2xl font-black text-[#0d3b6e] tracking-tight mt-1">
+            Faculty &amp; Peer Reviewers Directory
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Maintain registered academic peer reviewers, assign incoming manuscripts, and track active workloads.
+            Manage enrolled subject specialists, inspect dual-reviewer workloads, or invite new faculty reviewers to the journal board.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            setCreatedCredentials(null);
-            setIsModalOpen(true);
-          }}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Enroll New Reviewer</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => dispatch(fetchReviewers())}
+            className="p-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
+            title="Refresh reviewer database"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              createFormik.resetForm();
+              setCreatedCredentials(null);
+              setIsModalOpen(true);
+            }}
+            className="px-4 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Enroll New Reviewer</span>
+          </button>
+        </div>
       </div>
 
-      {/* Search Input */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs">
-        <div className="relative max-w-md">
+      {/* Directory Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs">
+        <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
+            placeholder="Search by reviewer name, email, or expert domain..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search reviewers by name, email, or domain..."
-            className="w-full pl-10 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 transition-all"
           />
         </div>
-      </div>
-
-      {/* Reviewer Cards Table */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-[10px]">
-                <th className="py-3 px-4">Reviewer Name</th>
-                <th className="py-3 px-4">Subject Domain</th>
-                <th className="py-3 px-4">Institution</th>
-                <th className="py-3 px-4">Contact Email</th>
-                <th className="py-3 px-4">Active Assignments</th>
-                <th className="py-3 px-4 text-center">Completed Reports</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.map((rev) => {
-                const liveActiveCount = getActiveCount(rev);
-                return (
-                  <tr key={rev.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <p className="font-bold text-slate-900">{rev.name}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">ID: {rev.id}</p>
-                    </td>
-
-                    <td className="py-3.5 px-4 max-w-xs">
-                      <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 font-medium text-xs">
-                        {rev.domain}
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4 text-slate-700">{rev.institution}</td>
-
-                    <td className="py-3.5 px-4 font-mono text-slate-600">{rev.email}</td>
-
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`px-2.5 py-1 rounded-full font-bold text-[10px] inline-flex items-center gap-1 ${
-                          liveActiveCount > 0
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        <Clock className="w-3 h-3" />
-                        <span>{liveActiveCount} Active</span>
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4 text-center font-bold text-slate-800">
-                      {rev.totalCompletedReviews}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenAssignModal(rev)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                          title={`Assign a manuscript to ${rev.name}`}
-                        >
-                          <UserCheck className="w-3.5 h-3.5" />
-                          <span>Assign Paper</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingReviewer(rev)}
-                          className="p-1.5 bg-slate-100 hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 rounded-xl transition-colors cursor-pointer"
-                          title={`Edit ${rev.name}'s profile`}
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeletingReviewer(rev)}
-                          className="p-1.5 bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 rounded-xl transition-colors cursor-pointer"
-                          title={`Delete ${rev.name} from directory`}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="text-xs text-slate-500 font-medium">
+          Showing <strong className="text-slate-800">{filtered.length}</strong> of {reviewers.length} reviewer(s)
         </div>
       </div>
 
-      {/* Assign Manuscript to Reviewer Modal */}
+      {/* Reviewer Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map((rev) => {
+          const activeCount = getActiveCount(rev);
+          return (
+            <div
+              key={rev.id}
+              className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between gap-4"
+            >
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-800 font-extrabold flex items-center justify-center text-sm shrink-0">
+                      {rev.name.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-sm leading-snug">{rev.name}</h3>
+                      <span className="font-mono text-[10px] text-slate-400 block">{rev.id}</span>
+                    </div>
+                  </div>
+
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      activeCount > 0
+                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                        : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                    }`}
+                  >
+                    {activeCount > 0 ? `${activeCount} Active` : 'Available'}
+                  </span>
+                </div>
+
+                <div className="space-y-1.5 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">{rev.email}</span>
+                  </div>
+                  {rev.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span>{rev.phone}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="truncate">{rev.institution}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1">
+                    Expert Domain
+                  </span>
+                  <span className="inline-block text-[11px] font-medium bg-slate-50 text-slate-700 px-2 py-1 rounded-lg border border-slate-200/80 leading-tight">
+                    {rev.domain}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingReviewer(rev)}
+                    className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                    title="Edit Reviewer Profile"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingReviewer(rev)}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                    title="Delete Reviewer Account"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleOpenAssignModal(rev)}
+                  className="px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Assign Paper</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="p-12 text-center bg-white border border-slate-200 rounded-2xl space-y-2">
+          <Users className="w-8 h-8 text-slate-300 mx-auto" />
+          <h3 className="text-sm font-bold text-slate-700">No Reviewers Found</h3>
+          <p className="text-xs text-slate-400">
+            No faculty reviewers matched your search criteria. Try a different query or enroll a new reviewer.
+          </p>
+        </div>
+      )}
+
+      {/* Assign Reviewer Modal */}
       {selectedReviewerForAssign && (
         <Modal
           isOpen={isAssignModalOpen}
           onClose={() => setIsAssignModalOpen(false)}
-          title="Assign Manuscript to Reviewer"
-          subtitle={`Assigning paper to ${selectedReviewerForAssign.name}`}
+          title="Assign Manuscript to Faculty Reviewer"
+          subtitle={`Assigning to: ${selectedReviewerForAssign.name}`}
           size="lg"
         >
           <form onSubmit={handleConfirmAssignment} className="space-y-4 text-xs">
-            {/* Reviewer Summary Card */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-slate-900 text-sm">{selectedReviewerForAssign.name}</span>
@@ -504,64 +523,71 @@ export const ReviewersManagementPage: React.FC = () => {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleCreateSubmit} className="space-y-4 text-xs">
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Full Name &amp; Title *</label>
-              <input
-                type="text"
-                required
-                value={newReviewer.name}
-                onChange={(e) => setNewReviewer({ ...newReviewer, name: e.target.value })}
-                placeholder="e.g. Dr. A. P. Sharma"
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-              />
-            </div>
+          <form onSubmit={createFormik.handleSubmit} className="space-y-4 text-xs" noValidate>
+            <FormInput
+              label="Full Name & Title"
+              required
+              id="name"
+              name="name"
+              placeholder="e.g. Dr. A. P. Sharma"
+              value={createFormik.values.name}
+              onChange={createFormik.handleChange}
+              onBlur={createFormik.handleBlur}
+              error={createFormik.errors.name}
+              touched={createFormik.touched.name}
+            />
 
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Institutional Email *</label>
-              <input
-                type="email"
-                required
-                value={newReviewer.email}
-                onChange={(e) => setNewReviewer({ ...newReviewer, email: e.target.value })}
-                placeholder="reviewer@university.edu"
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-              />
-            </div>
+            <FormInput
+              label="Institutional Email"
+              required
+              type="email"
+              id="email"
+              name="email"
+              placeholder="reviewer@university.edu"
+              value={createFormik.values.email}
+              onChange={createFormik.handleChange}
+              onBlur={createFormik.handleBlur}
+              error={createFormik.errors.email}
+              touched={createFormik.touched.email}
+            />
 
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Phone Number</label>
-              <input
-                type="text"
-                value={newReviewer.phone}
-                onChange={(e) => setNewReviewer({ ...newReviewer, phone: e.target.value })}
-                placeholder="+91 98100 00000"
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-              />
-            </div>
+            <FormInput
+              label="Phone Number"
+              id="phone"
+              name="phone"
+              placeholder="+91 98100 00000"
+              value={createFormik.values.phone}
+              onChange={createFormik.handleChange}
+              onBlur={createFormik.handleBlur}
+              error={createFormik.errors.phone}
+              touched={createFormik.touched.phone}
+            />
 
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Affiliated Institution</label>
-              <input
-                type="text"
-                value={newReviewer.institution}
-                onChange={(e) =>
-                  setNewReviewer({ ...newReviewer, institution: e.target.value })
-                }
-                placeholder="e.g. Indian Institute of Technology"
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-              />
-            </div>
+            <FormInput
+              label="Affiliated Institution"
+              required
+              id="institution"
+              name="institution"
+              placeholder="e.g. Indian Institute of Technology"
+              value={createFormik.values.institution}
+              onChange={createFormik.handleChange}
+              onBlur={createFormik.handleBlur}
+              error={createFormik.errors.institution}
+              touched={createFormik.touched.institution}
+            />
 
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Expert Subject Domain *</label>
-              <input
-                type="text"
-                value={newReviewer.domain}
-                onChange={(e) => setNewReviewer({ ...newReviewer, domain: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl"
-              />
-            </div>
+            <FormInput
+              label="Expert Subject Domain"
+              required
+              id="domain"
+              name="domain"
+              placeholder="e.g. Artificial Intelligence and Machine Learning"
+              value={createFormik.values.domain}
+              onChange={createFormik.handleChange}
+              onBlur={createFormik.handleBlur}
+              error={createFormik.errors.domain}
+              touched={createFormik.touched.domain}
+            />
 
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
@@ -573,7 +599,8 @@ export const ReviewersManagementPage: React.FC = () => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold rounded-xl cursor-pointer"
+                disabled={!createFormik.isValid}
+                className="px-5 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold rounded-xl cursor-pointer disabled:opacity-50"
               >
                 Create Reviewer Account
               </button>
@@ -588,7 +615,7 @@ export const ReviewersManagementPage: React.FC = () => {
         onClose={() => setEditingReviewer(null)}
         reviewer={editingReviewer}
         onSuccess={(updated) => {
-          setSuccessToast(`Reviewer "${updated.name}" updated successfully.`);
+          toast.success(`Reviewer "${updated.name}" updated successfully.`);
           dispatch(fetchReviewers());
         }}
       />
@@ -599,7 +626,6 @@ export const ReviewersManagementPage: React.FC = () => {
         onClose={() => setDeletingReviewer(null)}
         reviewer={deletingReviewer}
         onSuccess={() => {
-          setSuccessToast('Reviewer deleted successfully from journal directory.');
           dispatch(fetchReviewers());
         }}
       />

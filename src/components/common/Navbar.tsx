@@ -1,35 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { logoutUser } from '../../store/slices/authSlice';
 import {
   Menu,
   LogOut,
-  User as UserIcon,
   ChevronDown,
-  BookOpen,
-  Sparkles,
-  Shield,
-  Layers,
   Building,
   KeyRound,
+  Shield,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { ChangePasswordModal } from './ChangePasswordModal';
+import { useToast } from '../../context/ToastContext';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
+export const Navbar: React.FC<NavbarProps> = ({
+  onToggleSidebar,
+  isCollapsed,
+  onToggleCollapse,
+}) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const toast = useToast();
   const { user } = useAppSelector((state) => state.auth);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
+    toast.info('Signed out successfully.');
     navigate('/login');
+  };
+
+  const roleLabels: Record<string, string> = {
+    editor: 'Editorial Office (Admin)',
+    author: 'Corresponding Author',
+    reviewer: 'Peer Reviewer',
   };
 
   const roleBadgeColors: Record<string, string> = {
@@ -39,9 +64,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/90 sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6">
-      {/* Left: Mobile Menu & Journal Title */}
+    <header className="h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-30 flex items-center justify-between px-4 sm:px-6 transition-all">
+      {/* Left: Mobile Drawer Trigger, Desktop Collapse Toggle, and Brand Info */}
       <div className="flex items-center gap-3">
+        {/* Mobile menu button */}
         <button
           type="button"
           onClick={onToggleSidebar}
@@ -51,8 +77,26 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-[#0d3b6e] text-amber-400 font-extrabold flex items-center justify-center text-sm shadow-xs tracking-tight">
+        {/* Desktop collapse shortcut button */}
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="hidden lg:flex p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isCollapsed ? (
+              <PanelLeftOpen className="w-4 h-4 text-slate-600" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4 text-slate-500" />
+            )}
+          </button>
+        )}
+
+        {/* Brand identity & Institutional Pill */}
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0d3b6e] to-[#1e3a8a] text-amber-300 font-black flex items-center justify-center text-sm shadow-xs shrink-0 tracking-tight">
             IJ
           </div>
           <div>
@@ -60,38 +104,52 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               <span className="font-extrabold text-slate-900 tracking-tight text-sm">
                 IJSPAST
               </span>
-              <span className="text-[10px] text-slate-400 font-mono font-semibold hidden sm:inline">
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 font-mono font-semibold hidden sm:inline border border-slate-200/80">
                 E-ISSN: 2582-8800
+              </span>
+              <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                • SRMU Journal Publishing System
               </span>
             </div>
             <p className="text-[11px] text-slate-500 truncate max-w-[240px] sm:max-w-md hidden md:block">
-              International Journal of Scientific Progress in Applied Science &amp; Technology
+              International Journal of Scientific Progress in Applied Science and Engineering
             </p>
           </div>
         </div>
       </div>
 
-      {/* Right: Authenticated User Profile & Logout */}
+      {/* Right: User Status & Profile Dropdown */}
       <div className="flex items-center gap-3">
+        {/* Double-Blind Status Chip */}
+        <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200/80 text-[11px] font-semibold text-slate-600">
+          <Shield className="w-3.5 h-3.5 text-indigo-600" />
+          <span>Double-Blind Active</span>
+        </div>
+
         {/* User Profile Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={dropdownRef}>
           <button
             type="button"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors text-xs font-semibold text-slate-700 cursor-pointer"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200/80 hover:bg-slate-50 transition-all text-xs font-semibold text-slate-700 cursor-pointer shadow-2xs"
+            aria-expanded={dropdownOpen}
           >
-            <div className="w-6 h-6 rounded-lg bg-[#0d3b6e] text-white flex items-center justify-center font-bold text-[10px] uppercase">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#0d3b6e] to-indigo-600 text-white flex items-center justify-center font-bold text-xs uppercase shadow-2xs">
               {user?.name?.[0] || user?.role?.[0] || 'U'}
             </div>
             <div className="text-left hidden sm:block">
-              <span className="block font-bold text-slate-800 text-[11px] leading-tight truncate max-w-[140px]">
-                {user?.name || 'User'}
+              <span className="block font-bold text-slate-800 text-[11px] leading-tight truncate max-w-[130px]">
+                {user?.name || 'Administrator'}
               </span>
-              <span className="text-[10px] text-slate-400 font-medium capitalize">
-                {user?.role || 'Guest'}
+              <span className="text-[10px] text-slate-400 font-medium capitalize block leading-tight">
+                {roleLabels[user?.role || 'author'] || user?.role || 'Editor'}
               </span>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-150 ${
+                dropdownOpen ? 'rotate-180' : ''
+              }`}
+            />
           </button>
 
           {dropdownOpen && (
@@ -111,7 +169,11 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
               </div>
 
               <div className="py-1">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${roleBadgeColors[user?.role || 'author'] || 'bg-slate-50 text-slate-700'}`}>
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${
+                    roleBadgeColors[user?.role || 'author'] || 'bg-slate-50 text-slate-700'
+                  }`}
+                >
                   Role: {user?.role}
                 </span>
               </div>
@@ -146,19 +208,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
             </div>
           )}
         </div>
-
-        {/* Logout Button */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          title="Sign out of journal session"
-          className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
       </div>
 
-      {/* Change Password Modal (Authors and Reviewers only) */}
+      {/* Change Password Modal */}
       <ChangePasswordModal
         isOpen={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}

@@ -4,6 +4,7 @@ import { ReviewerProfile } from '../../types/user.types';
 import { useAppDispatch } from '../../store';
 import { deleteExistingReviewer } from '../../store/slices/reviewerSlice';
 import { AlertTriangle, Trash2, Building, Mail, ShieldAlert } from 'lucide-react';
+import { useToast } from '../../context/ToastContext';
 
 interface DeleteReviewerModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export const DeleteReviewerModal: React.FC<DeleteReviewerModalProps> = ({
   onSuccess,
 }) => {
   const dispatch = useAppDispatch();
+  const toast = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -31,15 +33,19 @@ export const DeleteReviewerModal: React.FC<DeleteReviewerModalProps> = ({
     try {
       const resultAction = await dispatch(deleteExistingReviewer(reviewer.id));
       if (deleteExistingReviewer.fulfilled.match(resultAction)) {
+        toast.success(`Reviewer account for ${reviewer.name} permanently deleted.`);
         onSuccess(reviewer.id);
         onClose();
       } else {
-        setErrorMessage(
-          (resultAction.payload as string) || 'Failed to delete reviewer. Please try again.'
-        );
+        const msg =
+          (resultAction.payload as string) || 'Failed to delete reviewer. Please try again.';
+        setErrorMessage(msg);
+        toast.error(msg);
       }
     } catch (err: any) {
-      setErrorMessage(err.message || 'An unexpected error occurred while deleting reviewer.');
+      const msg = err.message || 'An unexpected error occurred while deleting reviewer.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }

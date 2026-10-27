@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useFormik } from 'formik';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { loginUser, clearAuthError } from '../../store/slices/authSlice';
+import { useToast } from '../../context/ToastContext';
+import { loginSchema } from '../../utils/validationSchemas';
+import { FormInput } from '../../components/forms/common/FormInput';
 import {
   Lock,
   Mail,
   ArrowRight,
   AlertCircle,
-  BookOpen,
   Shield,
   UserCheck,
 } from 'lucide-react';
@@ -16,6 +19,8 @@ export const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const toast = useToast();
+
   const { user, isAuthenticated, isLoading, error } = useAppSelector((state) => state.auth);
 
   const initialRole = searchParams.get('role');
@@ -32,28 +37,47 @@ export const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  const [email, setEmail] = useState(
-    initialRole === 'editor' ? '' : ''
-  );
-  const [password, setPassword] = useState('');
-
   const isEditorMode = portalMode === 'editor';
 
-  const handleLoginSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !password) return;
+  const formik = useFormik({
+    initialValues: {
+      email: '',
+      password: '',
+    },
+    validationSchema: loginSchema,
+    onSubmit: async (values) => {
+      dispatch(clearAuthError());
 
-    dispatch(clearAuthError());
+      const resultAction = await dispatch(
+        loginUser({
+          email: values.email.trim(),
+          password: values.password,
+        })
+      );
 
-    const resultAction = await dispatch(loginUser({ email: email.trim(), password }));
-    if (loginUser.fulfilled.match(resultAction)) {
-      const role = resultAction.payload.role;
-      if (role === 'author') navigate('/author/dashboard');
-      else if (role === 'editor') navigate('/editor/dashboard');
-      else if (role === 'reviewer') navigate('/reviewer/dashboard');
-      else navigate('/author/dashboard');
-    }
-  };
+      if (loginUser.fulfilled.match(resultAction)) {
+        const role = resultAction.payload.role;
+        const roleName =
+          role === 'author'
+            ? 'Author'
+            : role === 'editor'
+            ? 'Editorial Office'
+            : 'Peer Reviewer';
+
+        toast.success(`Welcome back! Signed in as ${roleName}.`);
+
+        if (role === 'author') navigate('/author/dashboard');
+        else if (role === 'editor') navigate('/editor/dashboard');
+        else if (role === 'reviewer') navigate('/reviewer/dashboard');
+        else navigate('/author/dashboard');
+      } else {
+        const errorMsg =
+          (resultAction.payload as string) ||
+          'Sign in failed. Please verify your credentials.';
+        toast.error(errorMsg);
+      }
+    },
+  });
 
   return (
     <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-150">
@@ -80,10 +104,11 @@ export const LoginPage: React.FC = () => {
               setPortalMode('author_reviewer');
               dispatch(clearAuthError());
             }}
-            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${portalMode === 'author_reviewer'
-              ? 'bg-white text-[#0d3b6e] shadow-xs'
-              : 'hover:text-slate-900'
-              }`}
+            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              portalMode === 'author_reviewer'
+                ? 'bg-white text-[#0d3b6e] shadow-xs'
+                : 'hover:text-slate-900'
+            }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
             <span>Author / Reviewer</span>
@@ -93,12 +118,12 @@ export const LoginPage: React.FC = () => {
             onClick={() => {
               setPortalMode('editor');
               dispatch(clearAuthError());
-
             }}
-            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${portalMode === 'editor'
-              ? 'bg-white text-[#0d3b6e] shadow-xs'
-              : 'hover:text-slate-900'
-              }`}
+            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              portalMode === 'editor'
+                ? 'bg-white text-[#0d3b6e] shadow-xs'
+                : 'hover:text-slate-900'
+            }`}
           >
             <Shield className="w-3.5 h-3.5" />
             <span>Editorial Office</span>
@@ -112,41 +137,37 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
-        <form onSubmit={handleLoginSubmit} className="space-y-4 text-xs">
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">
-              Registered Institutional Email <span className="text-red-500 font-bold ml-0.5">*</span>
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={isEditorMode ? "E-mail Id" : "E-mail Id"}
-                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
-              />
-            </div>
-          </div>
+        <form onSubmit={formik.handleSubmit} className="space-y-4 text-xs" noValidate>
+          <FormInput
+            label="Registered Institutional Email"
+            required
+            type="email"
+            id="email"
+            name="email"
+            placeholder="name@university.edu"
+            value={formik.values.email}
+            onChange={formik.handleChange}
+            onBlur={formik.handleBlur}
+            error={formik.errors.email}
+            touched={formik.touched.email}
+            leftIcon={<Mail className="w-4 h-4" />}
+          />
 
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="font-bold text-slate-700">
-                Password <span className="text-red-500 font-bold ml-0.5">*</span>
-              </label>
-            </div>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter account password"
-                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
-              />
-            </div>
+            <FormInput
+              label="Password"
+              required
+              type="password"
+              id="password"
+              name="password"
+              placeholder="Enter account password"
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.errors.password}
+              touched={formik.touched.password}
+              leftIcon={<Lock className="w-4 h-4" />}
+            />
 
             {/* Password Management Rules:
                 Author & Reviewer: Can use Forgot Password to reset via email OTP.
@@ -172,15 +193,13 @@ export const LoginPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={isLoading || !email.trim() || !password}
+            disabled={isLoading || !formik.isValid || !formik.values.email || !formik.values.password}
             className="w-full py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span>{isLoading ? 'Authenticating with Server...' : 'Sign In to Dashboard'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-
       </div>
     </div>
   );

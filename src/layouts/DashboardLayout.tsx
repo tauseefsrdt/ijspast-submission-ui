@@ -11,6 +11,7 @@ import {
 
 export const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
 
@@ -25,30 +26,43 @@ export const DashboardLayout: React.FC = () => {
   }, [dispatch, user?.role]);
 
   return (
-    <div className="min-h-screen bg-[#f3f6fb] text-slate-800 flex flex-col font-['IBM_Plex_Sans',sans-serif]">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col font-['IBM_Plex_Sans',sans-serif]">
       {/* Top Navbar */}
-      <Navbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <Navbar
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+      />
 
       <div className="flex-1 flex min-w-0">
-        {/* Sidebar */}
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        {/* Responsive & Collapsible Sidebar */}
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
+        />
 
         {/* Main Content Viewport */}
-        <div className="flex-1 flex flex-col min-w-0 lg:pl-64 transition-all">
+        <div
+          className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out ${
+            isCollapsed ? 'lg:pl-20' : 'lg:pl-64'
+          }`}
+        >
           <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
             <Outlet />
           </main>
 
           {/* Institutional Footer */}
-          <footer className="bg-white border-t border-slate-200/90 py-6 px-6 text-center text-xs text-slate-500 space-y-1">
-            <div className="font-semibold text-slate-700">
+          <footer className="bg-white border-t border-slate-200/80 py-6 px-6 text-center text-xs text-slate-500 space-y-1.5 mt-auto">
+            <div className="font-bold text-slate-700 tracking-tight">
               International Journal of Scientific Progress in Applied Science and Engineering (IJSPAST)
             </div>
-            <div className="text-[11px] text-slate-400">
-              Shri Ramswaroop Memorial University (SRMU) • E-ISSN: 2582-8800
+            <div className="text-[11px] text-slate-400 font-medium">
+              Shri Ramswaroop Memorial University (SRMU) • E-ISSN: 2582-8800 • Open Access Journal
             </div>
             <div className="text-[10px] text-slate-400">
-              Double-Blind Peer Review • Role-Based Editorial Lifecycle Management
+              Double-Blind Peer Review • Enterprise Editorial Lifecycle Management System
             </div>
           </footer>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useFormik } from 'formik';
 import {
   Mail,
   KeyRound,
@@ -23,21 +24,27 @@ import {
   resendOtpThunk,
   resetPasswordThunk,
 } from '../../store/slices/authSlice';
+import { useToast } from '../../context/ToastContext';
+import {
+  forgotPasswordEmailSchema,
+  verifyOtpSchema,
+  resetPasswordSchema,
+} from '../../utils/validationSchemas';
+import { FormInput } from '../../components/forms/common/FormInput';
 
 type Step = 'email' | 'otp' | 'reset' | 'success';
 
 export const ForgotPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const toast = useToast();
 
   // Step state
   const [currentStep, setCurrentStep] = useState<Step>('email');
 
-  // Form states
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  // Multi-step session state
+  const [savedEmail, setSavedEmail] = useState('');
+  const [savedOtp, setSavedOtp] = useState('');
   const [resetToken, setResetToken] = useState('');
 
   // Password visibility
@@ -50,8 +57,8 @@ export const ForgotPasswordPage: React.FC = () => {
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
 
   // Countdown timers
-  const [resendCooldown, setResendCooldown] = useState(0); // in seconds
-  const [otpExpiresIn, setOtpExpiresIn] = useState(600); // 10 minutes in seconds
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(600);
   const [redirectCountdown, setRedirectCountdown] = useState(3);
 
   // Resend cooldown timer effect
@@ -63,7 +70,7 @@ export const ForgotPasswordPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [resendCooldown]);
 
-  // OTP expiration timer effect (active during 'otp' step)
+  // OTP expiration timer effect
   useEffect(() => {
     if (currentStep !== 'otp' || otpExpiresIn <= 0) return;
     const interval = setInterval(() => {
@@ -85,147 +92,144 @@ export const ForgotPasswordPage: React.FC = () => {
     return () => clearInterval(timer);
   }, [currentStep, redirectCountdown, navigate]);
 
-  // Format seconds to mm:ss
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Step 1: Send OTP to email
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanEmail = email.trim();
-    if (!cleanEmail) return;
+  // --- Step 1 Formik Form ---
+  const emailFormik = useFormik({
+    initialValues: { email: '' },
+    validationSchema: forgotPasswordEmailSchema,
+    onSubmit: async (values) => {
+      const cleanEmail = values.email.trim();
+      setError(null);
+      setInfoMessage(null);
+      setIsLoading(true);
 
-    setError(null);
-    setInfoMessage(null);
-    setIsLoading(true);
-
-    if (cleanEmail.toLowerCase().startsWith('editor@')) {
-      setError('Editor accounts cannot be reset via the portal. Editor credentials are managed centrally by the system administrator.');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      await dispatch(forgotPasswordThunk(cleanEmail)).unwrap();
-      setCurrentStep('otp');
-      setResendCooldown(60);
-      setOtpExpiresIn(600);
-      setInfoMessage(`A 6-digit verification code has been dispatched to ${cleanEmail}`);
-    } catch (err: any) {
-      setError(err?.message || err || 'Failed to dispatch verification code. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Step 2: Resend OTP
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0 || isLoading) return;
-    const cleanEmail = email.trim();
-    if (!cleanEmail) return;
-
-    setError(null);
-    setInfoMessage(null);
-    setIsLoading(true);
-
-    try {
-      await dispatch(resendOtpThunk(cleanEmail)).unwrap();
-      setResendCooldown(60);
-      setOtpExpiresIn(600);
-      setInfoMessage(`A new 6-digit OTP code has been dispatched to ${cleanEmail}`);
-    } catch (err: any) {
-      setError(err?.message || err || 'Failed to resend OTP. Please wait before retrying.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Step 2: Verify OTP
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanEmail = email.trim();
-    const cleanOtp = otp.trim();
-
-    if (!cleanEmail) {
-      setError('Email address is missing. Please restart the reset process.');
-      return;
-    }
-    if (cleanOtp.length !== 6) {
-      setError('Please enter the full 6-digit OTP code.');
-      return;
-    }
-
-    if (otpExpiresIn <= 0) {
-      setError('OTP has expired. Please click "Resend Code" to receive a fresh OTP.');
-      return;
-    }
-
-    setError(null);
-    setInfoMessage(null);
-    setIsLoading(true);
-
-    try {
-      const response: any = await dispatch(
-        verifyOtpThunk({ email: cleanEmail, otp: cleanOtp })
-      ).unwrap();
-
-      if (response && response.resetToken) {
-        setResetToken(response.resetToken);
+      try {
+        await dispatch(forgotPasswordThunk(cleanEmail)).unwrap();
+        setSavedEmail(cleanEmail);
+        setCurrentStep('otp');
+        setResendCooldown(60);
+        setOtpExpiresIn(600);
+        const notice = `A 6-digit verification code has been dispatched to ${cleanEmail}`;
+        setInfoMessage(notice);
+        toast.success('Verification code dispatched to your email.');
+      } catch (err: any) {
+        const msg = err?.message || err || 'Failed to dispatch verification code. Please try again.';
+        setError(msg);
+        toast.error(msg);
+      } finally {
+        setIsLoading(false);
       }
-      setCurrentStep('reset');
-      setInfoMessage('OTP verified successfully! Please enter your new password.');
-    } catch (err: any) {
-      setError(err?.message || err || 'Invalid or expired OTP. Please check the code or request a new one.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  // Step 3: Reset Password
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // --- Step 2 Formik Form ---
+  const otpFormik = useFormik({
+    initialValues: { otp: '' },
+    validationSchema: verifyOtpSchema,
+    onSubmit: async (values) => {
+      if (otpExpiresIn <= 0) {
+        const msg = 'OTP has expired. Please click "Resend Code" to receive a fresh OTP.';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      setError(null);
+      setInfoMessage(null);
+      setIsLoading(true);
+
+      try {
+        const response: any = await dispatch(
+          verifyOtpThunk({ email: savedEmail, otp: values.otp.trim() })
+        ).unwrap();
+
+        if (response?.resetToken) {
+          setResetToken(response.resetToken);
+        }
+        setSavedOtp(values.otp.trim());
+        setCurrentStep('reset');
+        setInfoMessage('OTP verified successfully! Please enter your new password.');
+        toast.success('OTP verified successfully.');
+      } catch (err: any) {
+        const msg = err?.message || err || 'Invalid or expired OTP. Please check the code or request a new one.';
+        setError(msg);
+        toast.error(msg);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  // Resend OTP Handler
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || isLoading || !savedEmail) return;
+
     setError(null);
     setInfoMessage(null);
-
-    if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters long.');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('New password and confirm password do not match.');
-      return;
-    }
-
     setIsLoading(true);
-    try {
-      await dispatch(
-        resetPasswordThunk({
-          token: resetToken,
-          newPassword,
-          confirmPassword,
-          email: email.trim(),
-          otp: otp.trim(),
-        })
-      ).unwrap();
 
-      setCurrentStep('success');
-      setRedirectCountdown(3);
+    try {
+      await dispatch(resendOtpThunk(savedEmail)).unwrap();
+      setResendCooldown(60);
+      setOtpExpiresIn(600);
+      setInfoMessage(`A new 6-digit OTP code has been dispatched to ${savedEmail}`);
+      toast.success('New OTP dispatched to your email.');
     } catch (err: any) {
-      setError(err?.message || err || 'Password reset failed. Your session may have expired.');
+      const msg = err?.message || err || 'Failed to resend OTP. Please wait before retrying.';
+      setError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Password validation checks
-  const isLengthValid = newPassword.length >= 8;
-  const hasLetter = /[a-zA-Z]/.test(newPassword);
-  const hasNumber = /[0-9]/.test(newPassword);
-  const passwordsMatch = newPassword.length > 0 && newPassword === confirmPassword;
+  // --- Step 3 Formik Form ---
+  const resetFormik = useFormik({
+    initialValues: {
+      newPassword: '',
+      confirmPassword: '',
+    },
+    validationSchema: resetPasswordSchema,
+    onSubmit: async (values) => {
+      setError(null);
+      setInfoMessage(null);
+      setIsLoading(true);
+
+      try {
+        await dispatch(
+          resetPasswordThunk({
+            token: resetToken,
+            newPassword: values.newPassword,
+            confirmPassword: values.confirmPassword,
+            email: savedEmail,
+            otp: savedOtp,
+          })
+        ).unwrap();
+
+        setCurrentStep('success');
+        setRedirectCountdown(3);
+        toast.success('Password updated successfully! Redirecting to login.');
+      } catch (err: any) {
+        const msg = err?.message || err || 'Password reset failed. Your session may have expired.';
+        setError(msg);
+        toast.error(msg);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
+
+  // Password validation checks for dynamic checklist UI
+  const newPass = resetFormik.values.newPassword;
+  const isLengthValid = newPass.length >= 8;
+  const hasLetter = /[a-zA-Z]/.test(newPass);
+  const hasNumber = /[0-9]/.test(newPass);
+  const passwordsMatch = newPass.length > 0 && newPass === resetFormik.values.confirmPassword;
 
   return (
     <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-150">
@@ -250,9 +254,7 @@ export const ForgotPasswordPage: React.FC = () => {
             <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
               <span
                 className={`flex items-center gap-1.5 ${
-                  currentStep === 'email'
-                    ? 'text-[#0d3b6e] font-bold'
-                    : 'text-emerald-600'
+                  currentStep === 'email' ? 'text-[#0d3b6e] font-bold' : 'text-emerald-600'
                 }`}
               >
                 <span
@@ -306,9 +308,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
               <span
                 className={`flex items-center gap-1.5 ${
-                  currentStep === 'reset'
-                    ? 'text-[#0d3b6e] font-bold'
-                    : 'text-slate-400'
+                  currentStep === 'reset' ? 'text-[#0d3b6e] font-bold' : 'text-slate-400'
                 }`}
               >
                 <span
@@ -344,7 +344,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
         {/* STEP 1: Enter Registered Email */}
         {currentStep === 'email' && (
-          <form onSubmit={handleSendOtp} className="space-y-4 text-xs">
+          <form onSubmit={emailFormik.handleSubmit} className="space-y-4 text-xs" noValidate>
             <div className="text-slate-600 space-y-1">
               <p className="font-semibold text-slate-800 text-sm">
                 Forgot your password?
@@ -354,26 +354,24 @@ export const ForgotPasswordPage: React.FC = () => {
               </p>
             </div>
 
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">
-                Registered Institutional Email <span className="text-red-500 font-bold ml-0.5">*</span>
-              </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@university.edu"
-                  className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
-                />
-              </div>
-            </div>
+            <FormInput
+              label="Registered Institutional Email"
+              required
+              type="email"
+              id="email"
+              name="email"
+              placeholder="name@university.edu"
+              value={emailFormik.values.email}
+              onChange={emailFormik.handleChange}
+              onBlur={emailFormik.handleBlur}
+              error={emailFormik.errors.email}
+              touched={emailFormik.touched.email}
+              leftIcon={<Mail className="w-4 h-4" />}
+            />
 
             <button
               type="submit"
-              disabled={isLoading || !email.trim()}
+              disabled={isLoading || !emailFormik.values.email || !emailFormik.isValid}
               className="w-full py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{isLoading ? 'Generating & Sending OTP...' : 'Send Verification OTP'}</span>
@@ -394,7 +392,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
         {/* STEP 2: Verify 6-digit OTP */}
         {currentStep === 'otp' && (
-          <form onSubmit={handleVerifyOtp} className="space-y-4 text-xs">
+          <form onSubmit={otpFormik.handleSubmit} className="space-y-4 text-xs" noValidate>
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-slate-700 space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-800">
@@ -413,7 +411,7 @@ export const ForgotPasswordPage: React.FC = () => {
                 </button>
               </div>
               <p className="text-slate-900 font-semibold break-all text-xs">
-                {email}
+                {savedEmail}
               </p>
             </div>
 
@@ -428,9 +426,7 @@ export const ForgotPasswordPage: React.FC = () => {
                   }`}
                 >
                   <Clock className="w-3 h-3" />
-                  <span>
-                    Expires in: {formatTime(otpExpiresIn)}
-                  </span>
+                  <span>Expires in: {formatTime(otpExpiresIn)}</span>
                 </span>
               </div>
 
@@ -438,18 +434,26 @@ export const ForgotPasswordPage: React.FC = () => {
                 <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
+                  id="otp"
+                  name="otp"
                   required
                   maxLength={6}
-                  value={otp}
+                  value={otpFormik.values.otp}
                   onChange={(e) => {
-                    // Only allow digits
                     const val = e.target.value.replace(/[^0-9]/g, '');
-                    setOtp(val);
+                    otpFormik.setFieldValue('otp', val);
                   }}
+                  onBlur={otpFormik.handleBlur}
                   placeholder="123456"
                   className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 tracking-[0.4em] font-mono text-center text-sm font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
                 />
               </div>
+
+              {otpFormik.touched.otp && otpFormik.errors.otp && (
+                <p className="text-rose-600 text-[11px] font-medium mt-1">
+                  {otpFormik.errors.otp}
+                </p>
+              )}
 
               {otpExpiresIn <= 0 && (
                 <p className="text-rose-600 text-[11px] font-medium mt-1">
@@ -460,9 +464,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
             {/* Resend OTP Bar */}
             <div className="flex items-center justify-between pt-1">
-              <span className="text-[11px] text-slate-500">
-                Didn't receive the email?
-              </span>
+              <span className="text-[11px] text-slate-500">Didn't receive the email?</span>
               <button
                 type="button"
                 onClick={handleResendOtp}
@@ -471,16 +473,18 @@ export const ForgotPasswordPage: React.FC = () => {
               >
                 <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
                 <span>
-                  {resendCooldown > 0
-                    ? `Resend in ${resendCooldown}s`
-                    : 'Resend Code'}
+                  {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code'}
                 </span>
               </button>
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || otp.trim().length !== 6 || otpExpiresIn <= 0}
+              disabled={
+                isLoading ||
+                otpFormik.values.otp.length !== 6 ||
+                otpExpiresIn <= 0
+              }
               className="w-full py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{isLoading ? 'Verifying Code...' : 'Verify OTP'}</span>
@@ -506,66 +510,64 @@ export const ForgotPasswordPage: React.FC = () => {
 
         {/* STEP 3: Enter New Password & Confirm Password */}
         {currentStep === 'reset' && (
-          <form onSubmit={handleResetPassword} className="space-y-4 text-xs">
+          <form onSubmit={resetFormik.handleSubmit} className="space-y-4 text-xs" noValidate>
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center gap-2 text-emerald-800">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
               <div className="text-[11px] leading-tight">
                 <span className="font-bold block">Identity Verified</span>
-                <span>You can now set a new password for {email}</span>
+                <span>You can now set a new password for {savedEmail}</span>
               </div>
             </div>
 
             {/* New Password */}
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">
-                New Password <span className="text-red-500 font-bold ml-0.5">*</span>
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  minLength={8}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Minimum 8 characters"
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
-                />
+            <FormInput
+              label="New Password"
+              required
+              type={showPassword ? 'text' : 'password'}
+              id="newPassword"
+              name="newPassword"
+              placeholder="Minimum 8 characters"
+              value={resetFormik.values.newPassword}
+              onChange={resetFormik.handleChange}
+              onBlur={resetFormik.handleBlur}
+              error={resetFormik.errors.newPassword}
+              touched={resetFormik.touched.newPassword}
+              leftIcon={<Lock className="w-4 h-4" />}
+              rightElement={
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
-              </div>
-            </div>
+              }
+            />
 
             {/* Confirm New Password */}
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">
-                Confirm New Password <span className="text-red-500 font-bold ml-0.5">*</span>
-              </label>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  required
-                  minLength={8}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Re-enter your new password"
-                  className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
-                />
+            <FormInput
+              label="Confirm New Password"
+              required
+              type={showConfirmPassword ? 'text' : 'password'}
+              id="confirmPassword"
+              name="confirmPassword"
+              placeholder="Re-enter your new password"
+              value={resetFormik.values.confirmPassword}
+              onChange={resetFormik.handleChange}
+              onBlur={resetFormik.handleBlur}
+              error={resetFormik.errors.confirmPassword}
+              touched={resetFormik.touched.confirmPassword}
+              leftIcon={<Lock className="w-4 h-4" />}
+              rightElement={
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
-              </div>
-            </div>
+              }
+            />
 
             {/* Validation Check Indicators */}
             <div className="p-2.5 bg-slate-50 rounded-xl space-y-1.5 text-[11px] border border-slate-200/80">
@@ -603,7 +605,7 @@ export const ForgotPasswordPage: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isLoading || !isLengthValid || !passwordsMatch}
+              disabled={isLoading || !resetFormik.isValid || !resetFormik.values.newPassword}
               className="w-full py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{isLoading ? 'Updating Secure Credentials...' : 'Save New Password'}</span>

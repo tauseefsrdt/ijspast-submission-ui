@@ -15,9 +15,14 @@ import {
 import { fetchReviewsByManuscript } from '../../features/reviews/reviewThunk';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { AssignReviewerModal } from '../../components/modals/AssignReviewerModal';
+import { RejectManuscriptModal } from '../../components/modals/RejectManuscriptModal';
+import { PublishManuscriptModal } from '../../components/modals/PublishManuscriptModal';
+import { ForwardRevisionModal } from '../../components/modals/ForwardRevisionModal';
+import { ConsolidatedFeedbackModal } from '../../components/modals/ConsolidatedFeedbackModal';
 import { Modal } from '../../components/common/Modal';
 import { ReviewReport } from '../../types/review.types';
 import { SRMU_CRITERIA } from '../../components/forms/ReviewForm';
+import { useToast } from '../../context/ToastContext';
 import {
   ArrowLeft,
   Users,
@@ -42,6 +47,7 @@ export const EditorManuscriptDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const toast = useToast();
 
   const { user } = useAppSelector((state) => state.auth);
   const { manuscripts } = useAppSelector((state) => state.manuscripts);
@@ -52,20 +58,16 @@ export const EditorManuscriptDetails: React.FC = () => {
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
-  const [forwardDeadlineDays, setForwardDeadlineDays] = useState(14);
-  const [forwardNotes, setForwardNotes] = useState('');
   const [isForwarding, setIsForwarding] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
 
   const [revisionComments, setRevisionComments] = useState('');
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [publishForm, setPublishForm] = useState({
+  const defaultPublishForm = {
     doi: `10.5555/ijspast.${new Date().getFullYear()}.${id?.slice(-4) || '0001'}`,
     volume: 'Vol. 14',
     issue: 'Issue 1',
-    publishedDate: new Date().toISOString().split('T')[0],
-  });
+  };
 
   useEffect(() => {
     if (id) {
@@ -263,15 +265,20 @@ export const EditorManuscriptDetails: React.FC = () => {
     reviewer2Id?: string,
     reviewer2Name?: string
   ) => {
-    await dispatch(
-      assignManuscriptReviewer({
-        manuscriptId: manuscript.id,
-        reviewerId,
-        reviewerName,
-        reviewer2Id,
-        reviewer2Name,
-      })
-    );
+    try {
+      await dispatch(
+        assignManuscriptReviewer({
+          manuscriptId: manuscript.id,
+          reviewerId,
+          reviewerName,
+          reviewer2Id,
+          reviewer2Name,
+        })
+      ).unwrap();
+      toast.success(`Reviewer(s) assigned to ${manuscript.id} successfully!`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to assign reviewer.');
+    }
   };
 
   const handleConfirmRevision = async () => {
@@ -284,6 +291,7 @@ export const EditorManuscriptDetails: React.FC = () => {
           editorName: user?.name || 'Editor-in-Chief',
         })
       ).unwrap();
+      toast.success(`Consolidated feedback dispatched to author for ${manuscript.id}!`);
       setIsRevisionModalOpen(false);
       setRevisionComments('');
       if (id) {
@@ -291,68 +299,75 @@ export const EditorManuscriptDetails: React.FC = () => {
         await dispatch(fetchReviewsByManuscript(id));
       }
     } catch (err: any) {
+      const msg = typeof err === 'string' ? err : err?.message || 'Failed to dispatch consolidated feedback to author.';
       console.error('Failed to dispatch consolidated feedback:', err);
-      alert(typeof err === 'string' ? err : err?.message || 'Failed to dispatch consolidated feedback to author.');
+      toast.error(msg);
     }
   };
 
-  const handleConfirmForwardRevision = async () => {
+  const handleConfirmForwardRevision = async (deadlineDays: number, notes: string) => {
     setIsForwarding(true);
     try {
       await dispatch(
         forwardRevisionThunk({
           manuscriptId: manuscript.id,
-          deadlineDays: forwardDeadlineDays,
-          notes: forwardNotes.trim() || undefined,
+          deadlineDays,
+          notes: notes.trim() || undefined,
         })
       ).unwrap();
+      toast.success(`Author revision successfully forwarded to peer reviewers!`);
       setIsForwardModalOpen(false);
-      setForwardNotes('');
       if (id) {
         await dispatch(fetchManuscriptById(id));
       }
     } catch (err: any) {
       console.error('Failed to forward revision:', err);
+      toast.error(err?.message || 'Failed to forward revision.');
     } finally {
       setIsForwarding(false);
     }
   };
 
-  const handleConfirmReject = async () => {
-    if (!rejectionReason.trim()) return;
+  const handleConfirmReject = async (reason: string) => {
     try {
       await dispatch(
         rejectManuscriptThunk({
           manuscriptId: manuscript.id,
-          reason: rejectionReason.trim(),
+          reason,
           editorName: user?.name || 'Editor-in-Chief',
         })
       ).unwrap();
+      toast.info(`Manuscript ${manuscript.id} has been formally rejected.`);
       setIsRejectModalOpen(false);
-      setRejectionReason('');
       if (id) {
         await dispatch(fetchManuscriptById(id));
       }
     } catch (err: any) {
       console.error('Failed to reject manuscript:', err);
+      toast.error(err?.message || 'Failed to reject manuscript.');
     }
   };
 
-  const handleConfirmPublish = async () => {
+  const handleConfirmPublish = async (details: { doi: string; volume: string; issue: string; publishedDate?: string }) => {
     try {
       await dispatch(
         publishManuscriptThunk({
           manuscriptId: manuscript.id,
-          details: publishForm,
+          details: {
+            ...details,
+            publishedDate: details.publishedDate || new Date().toISOString().split('T')[0],
+          },
           editorName: user?.name || 'Editor-in-Chief',
         })
       ).unwrap();
+      toast.success(`Manuscript ${manuscript.id} published to Open Access Archive!`);
       setIsPublishModalOpen(false);
       if (id) {
         await dispatch(fetchManuscriptById(id));
       }
     } catch (err: any) {
       console.error('Failed to publish manuscript:', err);
+      toast.error(err?.message || 'Failed to publish manuscript.');
     }
   };
 
@@ -364,11 +379,13 @@ export const EditorManuscriptDetails: React.FC = () => {
           editorName: user?.name || 'Editor-in-Chief',
         })
       ).unwrap();
+      toast.success(`Manuscript ${manuscript.id} formally accepted for publication!`);
       if (id) {
         await dispatch(fetchManuscriptById(id));
       }
     } catch (err: any) {
       console.error('Failed to accept manuscript:', err);
+      toast.error(err?.message || 'Failed to accept manuscript.');
     }
   };
 
@@ -533,9 +550,10 @@ export const EditorManuscriptDetails: React.FC = () => {
                         onClick={async () => {
                           try {
                             await dispatch(enableStage2Thunk(manuscript.id)).unwrap();
+                            toast.success('Stage 2 Review cycle successfully enabled for reviewers!');
                             if (id) await dispatch(fetchManuscriptById(id));
                           } catch (err: any) {
-                            alert(typeof err === 'string' ? err : err?.message || 'Failed to enable Stage 2 review.');
+                            toast.error(typeof err === 'string' ? err : err?.message || 'Failed to enable Stage 2 review.');
                           }
                         }}
                         className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
@@ -1090,388 +1108,58 @@ export const EditorManuscriptDetails: React.FC = () => {
         onAssign={handleAssignReviewer}
       />
 
-      {/* MODAL: Forward Revisions to Reviewers (Requirement 2) */}
-      <Modal
+      {/* MODAL: Forward Revisions to Reviewers */}
+      <ForwardRevisionModal
         isOpen={!isMaxRevisionsReached && isForwardModalOpen}
         onClose={() => setIsForwardModalOpen(false)}
-        title="Forward Revisions to Reviewers (Round 2)"
-        subtitle={`Manuscript ID: ${manuscript.id} • ${manuscript.title}`}
-        size="lg"
-      >
-        <div className="space-y-4 text-xs">
-          <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl space-y-1.5 text-blue-900">
-            <div className="flex items-center gap-2 font-bold text-xs text-blue-950">
-              <Shield className="w-4 h-4 text-blue-700" />
-              <span>Editorial Transfer Control &amp; Double-Blind Anonymity</span>
-            </div>
-            <p className="text-[11px] leading-relaxed">
-              As Editor, forwarding this revision enables the assigned peer reviewer(s) to access the updated manuscript document and the author's rebuttal notes. Author identifying details remain strictly masked. An email notification will be dispatched to each assigned reviewer without generating or altering credentials.
-            </p>
-          </div>
+        manuscriptId={manuscript.id}
+        manuscriptTitle={manuscript.title}
+        primaryReviewerName={manuscript.assignedReviewerName}
+        secondaryReviewerName={manuscript.assignedReviewer2Name}
+        authorRevisionResponse={manuscript.authorRevisionResponse}
+        isLoading={isForwarding}
+        onForward={handleConfirmForwardRevision}
+      />
 
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-            <span className="font-bold text-slate-800 block">Assigned Reviewer(s):</span>
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-slate-700">
-                <span className="font-medium">Primary Reviewer:</span>
-                <span className="font-bold text-slate-900">{manuscript.assignedReviewerName || 'Not assigned'}</span>
-              </div>
-              {manuscript.assignedReviewer2Name && (
-                <div className="flex items-center justify-between text-slate-700">
-                  <span className="font-medium">Secondary Reviewer:</span>
-                  <span className="font-bold text-slate-900">{manuscript.assignedReviewer2Name}</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {manuscript.authorRevisionResponse && (
-            <div className="space-y-1">
-              <span className="font-bold text-slate-800 block">
-                Author Rebuttal &amp; Modification Summary:
-              </span>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 whitespace-pre-wrap max-h-32 overflow-y-auto font-sans leading-relaxed text-[11px]">
-                {manuscript.authorRevisionResponse}
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="font-bold text-slate-800 block mb-1">
-                Re-evaluation Deadline (Days) *
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={60}
-                value={forwardDeadlineDays}
-                onChange={(e) => setForwardDeadlineDays(parseInt(e.target.value) || 14)}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 focus:bg-white focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <label className="font-bold text-slate-800 block">
-              Editorial Instructions / Directives for Reviewers (Optional)
-            </label>
-            <textarea
-              rows={3}
-              value={forwardNotes}
-              onChange={(e) => setForwardNotes(e.target.value)}
-              placeholder="e.g., Please pay special attention to whether the author adequately addressed the methodology queries in Section 3..."
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 font-sans"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              disabled={isForwarding}
-              onClick={() => setIsForwardModalOpen(false)}
-              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={isForwarding}
-              onClick={handleConfirmForwardRevision}
-              className="px-5 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <Send className="w-4 h-4" />
-              <span>{isForwarding ? 'Forwarding...' : 'Forward Revisions to Reviewers'}</span>
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* MODAL: Request Revision & Consolidated Review Desk */}
-      <Modal
+      {/* MODAL: Consolidated Peer Review Desk */}
+      <ConsolidatedFeedbackModal
         isOpen={!isMaxRevisionsReached && isRevisionModalOpen}
         onClose={() => setIsRevisionModalOpen(false)}
-        title={hasDualReviewers ? 'Consolidated Peer Review Desk (Merge & Send to Author)' : 'Pass Comments to Author (Request Revisions)'}
-        subtitle={`Manuscript: ${manuscript.id} • ${hasDualReviewers ? (canMergeConsolidatedFeedback ? 'Dual Reviews Completed (2/2)' : hasSentConsolidatedFeedback ? 'Next Review Cycle Pending' : 'Review Status: Incomplete') : 'Single Reviewer'}`}
-        size="lg"
-      >
-        <div className="space-y-4 text-xs">
-          {/* Double-Blind Notice */}
-          <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-2 text-purple-900">
-            <Shield className="w-4 h-4 text-purple-700 shrink-0" />
-            <p className="text-[11px] leading-relaxed">
-              <strong>Double-Blind Guarantee:</strong> All reviewer comments forwarded to the author are strictly anonymized as <strong>"Reviewer 1"</strong> and <strong>"Reviewer 2"</strong>. Reviewer personal identities and contacts are NEVER disclosed.
-            </p>
-          </div>
-
-          {/* Dual Reviewer Wait Barrier if reviewers have not completed the current cycle */}
-          {hasDualReviewers && !canMergeConsolidatedFeedback && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
-              <div className="flex items-center gap-2 font-bold text-amber-950 text-xs">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>
-                  {hasSentConsolidatedFeedback
-                    ? 'Consolidated Feedback Sent: Waiting for Next Review Cycle Feedback'
-                    : 'Editorial Hold: Waiting for Second Reviewer Feedback'}
-                </span>
-              </div>
-              <p className="text-amber-900 leading-relaxed text-[11px]">
-                {hasSentConsolidatedFeedback ? (
-                  <>
-                    <strong>Policy Requirement:</strong> Consolidated feedback has already been sent to the Author. Under journal protocol, this button is disabled until both Reviewer 1 and Reviewer 2 submit their new evaluations for the next review cycle (Stage 2 / Round 2). Current progress: <strong>{isRev1NewSubmitted && isRev2NewSubmitted ? '2 of 2' : (isRev1NewSubmitted || isRev2NewSubmitted ? '1 of 2' : '0 of 2')}</strong> submitted.
-                  </>
-                ) : (
-                  <>
-                    <strong>Policy Requirement:</strong> The Editor must not send consolidated feedback to the Author until both reviewers have submitted their feedback. Because only <strong>{isRev1Stage1Submitted || isRev2Stage1Submitted ? '1 of 2 reviewers' : '0 of 2 reviewers'}</strong> has submitted so far, you must wait for the second reviewer to submit before merging and dispatching consolidated feedback.
-                  </>
-                )}
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                <div className={`p-3 rounded-lg border ${(hasSentConsolidatedFeedback ? isRev1NewSubmitted : isRev1Stage1Submitted) ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-amber-200 text-amber-900'}`}>
-                  <span className="font-bold block text-[11px]">Reviewer 1 ({manuscript.assignedReviewerName || 'Primary'}):</span>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    {(hasSentConsolidatedFeedback ? isRev1NewSubmitted : isRev1Stage1Submitted) ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Feedback Submitted ({rev1Final?.recommendation})</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700">
-                        <Clock className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Awaiting Submission</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className={`p-3 rounded-lg border ${(hasSentConsolidatedFeedback ? isRev2NewSubmitted : isRev2Stage1Submitted) ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950' : 'bg-white border-amber-200 text-amber-900'}`}>
-                  <span className="font-bold block text-[11px]">Reviewer 2 ({manuscript.assignedReviewer2Name || 'Secondary'}):</span>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    {(hasSentConsolidatedFeedback ? isRev2NewSubmitted : isRev2Stage1Submitted) ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Feedback Submitted ({rev2Final?.recommendation})</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700">
-                        <Clock className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Awaiting Submission</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Both Reviewers Submitted (or single reviewer) - Review & Merge Desk */}
-          {bothReviewersSubmitted && (
-            <div className="space-y-3">
-              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2 text-emerald-900 font-bold text-xs">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Both Reviewers' Feedback Received (2/2). Ready to merge.</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleAutoMergeReviews}
-                  className="px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Auto-Merge Both Reviews</span>
-                </button>
-              </div>
-
-              {/* Reviewer 1 & Reviewer 2 Comparison Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {rev1Final && (
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                      <span className="font-bold text-indigo-950">Reviewer 1 Feedback:</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200">
-                        {rev1Final.recommendation}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      Scores: Tech {rev1Final.technicalQuality}/5 • Orig {rev1Final.originality}/5 • Clarity {rev1Final.clarity}/5
-                    </div>
-                    <div className="p-2 bg-white rounded border border-slate-200 text-slate-700 text-[11px] whitespace-pre-wrap max-h-24 overflow-y-auto font-sans leading-relaxed">
-                      {rev1Final.commentsForAuthor}
-                    </div>
-                  </div>
-                )}
-
-                {rev2Final && (
-                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                      <span className="font-bold text-purple-950">Reviewer 2 Feedback:</span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-800 border border-purple-200">
-                        {rev2Final.recommendation}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      Scores: Tech {rev2Final.technicalQuality}/5 • Orig {rev2Final.originality}/5 • Clarity {rev2Final.clarity}/5
-                    </div>
-                    <div className="p-2 bg-white rounded border border-slate-200 text-slate-700 text-[11px] whitespace-pre-wrap max-h-24 overflow-y-auto font-sans leading-relaxed">
-                      {rev2Final.commentsForAuthor}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <div className="flex items-center justify-between">
-              <label className="font-bold text-slate-800 block">
-                Consolidated Editorial Review Report for Author *
-              </label>
-              {bothReviewersSubmitted && (
-                <button
-                  type="button"
-                  onClick={handleAutoMergeReviews}
-                  className="text-indigo-600 hover:text-indigo-800 text-[11px] font-bold underline cursor-pointer"
-                >
-                  Regenerate Merged Template
-                </button>
-              )}
-            </div>
-            <textarea
-              rows={8}
-              value={revisionComments}
-              onChange={(e) => setRevisionComments(e.target.value)}
-              placeholder={hasDualReviewers && !bothReviewersSubmitted ? "Waiting for both reviewers to submit feedback before consolidated report can be composed..." : "Review and synthesize both reviewers' feedback above into this consolidated report to dispatch to the author..."}
-              disabled={hasDualReviewers && !bothReviewersSubmitted}
-              className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans disabled:opacity-60 disabled:cursor-not-allowed"
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setIsRevisionModalOpen(false)}
-              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-medium cursor-pointer"
-            >
-              Close
-            </button>
-            <button
-              type="button"
-              disabled={!canMergeConsolidatedFeedback || !revisionComments.trim()}
-              onClick={handleConfirmRevision}
-              className="px-5 py-2.5 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
-            >
-              <Send className="w-4 h-4 text-slate-950" />
-              <span>
-                {!canMergeConsolidatedFeedback
-                  ? hasSentConsolidatedFeedback
-                    ? 'Awaiting Next-Cycle Reviewer Feedback (Cannot Send)'
-                    : `Waiting for Reviewer ${isRev1Stage1Submitted ? '2' : '1'} (Cannot Send)`
-                  : 'Dispatch Consolidated Feedback to Author'}
-              </span>
-            </button>
-          </div>
-        </div>
-      </Modal>
+        manuscriptId={manuscript.id}
+        hasDualReviewers={hasDualReviewers}
+        canMergeConsolidatedFeedback={canMergeConsolidatedFeedback}
+        hasSentConsolidatedFeedback={hasSentConsolidatedFeedback}
+        isRev1NewSubmitted={isRev1NewSubmitted}
+        isRev2NewSubmitted={isRev2NewSubmitted}
+        isRev1Stage1Submitted={isRev1Stage1Submitted}
+        isRev2Stage1Submitted={isRev2Stage1Submitted}
+        bothReviewersSubmitted={bothReviewersSubmitted}
+        primaryReviewerName={manuscript.assignedReviewerName}
+        secondaryReviewerName={manuscript.assignedReviewer2Name}
+        rev1Final={rev1Final}
+        rev2Final={rev2Final}
+        revisionComments={revisionComments}
+        onChangeRevisionComments={setRevisionComments}
+        onAutoMerge={handleAutoMergeReviews}
+        onConfirm={handleConfirmRevision}
+      />
 
       {/* MODAL: Reject */}
-      <Modal
+      <RejectManuscriptModal
         isOpen={isRejectModalOpen}
         onClose={() => setIsRejectModalOpen(false)}
-        title="Reject Manuscript"
-        subtitle={`Manuscript: ${manuscript.id}`}
-        size="md"
-      >
-        <div className="space-y-3 text-xs">
-          <p className="text-slate-600">
-            Provide the formal editorial reason for rejection (required):
-          </p>
-          <textarea
-            rows={3}
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            placeholder="State the scientific grounds or scope limitations..."
-            className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none"
-          />
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setIsRejectModalOpen(false)}
-              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmReject}
-              className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl"
-            >
-              Confirm Rejection
-            </button>
-          </div>
-        </div>
-      </Modal>
+        manuscriptId={manuscript.id}
+        onReject={handleConfirmReject}
+      />
 
       {/* MODAL: Publish */}
-      <Modal
+      <PublishManuscriptModal
         isOpen={isPublishModalOpen}
         onClose={() => setIsPublishModalOpen(false)}
-        title="Publish Manuscript Online"
-        subtitle={`Issue DOI and publication volume for ${manuscript.id}`}
-        size="md"
-      >
-        <div className="space-y-4 text-xs">
-          <div>
-            <label className="font-bold text-slate-700 block mb-1">
-              Digital Object Identifier (DOI):
-            </label>
-            <input
-              type="text"
-              value={publishForm.doi}
-              onChange={(e) => setPublishForm({ ...publishForm, doi: e.target.value })}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-mono text-slate-900"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Volume:</label>
-              <input
-                type="text"
-                value={publishForm.volume}
-                onChange={(e) => setPublishForm({ ...publishForm, volume: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900"
-              />
-            </div>
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Issue:</label>
-              <input
-                type="text"
-                value={publishForm.issue}
-                onChange={(e) => setPublishForm({ ...publishForm, issue: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-slate-900"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setIsPublishModalOpen(false)}
-              className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleConfirmPublish}
-              className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl"
-            >
-              Publish to Open Access
-            </button>
-          </div>
-        </div>
-      </Modal>
+        manuscriptId={manuscript.id}
+        initialData={defaultPublishForm}
+        onPublish={handleConfirmPublish}
+      />
     </div>
   );
 };

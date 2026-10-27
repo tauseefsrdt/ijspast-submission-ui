@@ -6,6 +6,7 @@ import { fetchReviewerManuscripts, fetchManuscriptById, downloadManuscriptFile }
 import { ReviewForm } from '../../components/forms/ReviewForm';
 import { ReviewReport, ReviewRecommendation } from '../../types/review.types';
 import { StatusBadge } from '../../components/common/StatusBadge';
+import { useToast } from '../../context/ToastContext';
 import {
   ArrowLeft,
   Download,
@@ -28,6 +29,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const toast = useToast();
 
   const { user } = useAppSelector((state) => state.auth);
   const { manuscripts } = useAppSelector((state) => state.manuscripts);
@@ -112,10 +114,10 @@ export const ReviewerManuscriptDetails: React.FC = () => {
         await dispatch(fetchReviewsByManuscript(id));
       }
       setActiveStageForm(null);
-      alert('Your peer review evaluation report has been successfully submitted to the Editor-in-Chief.');
+      toast.success('Your peer review evaluation report has been successfully submitted to the Editor-in-Chief.');
     } catch (err: any) {
       console.error('Review submission error:', err);
-      alert(`Review submission was not completed: ${err || 'Please check that Stage 2 has been enabled and try again.'}`);
+      toast.error(`Review submission was not completed: ${err || 'Please check that Stage 2 has been enabled and try again.'}`);
     } finally {
       setIsSubmitting(false);
     }

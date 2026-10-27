@@ -91,34 +91,34 @@ export const ReviewerDirectoryTable: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Relationship Architecture Callout */}
-      <div className="bg-gradient-to-r from-[#0d3b6e] via-[#1a4f8b] to-indigo-900 rounded-2xl p-5 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="p-1 bg-white/20 rounded-md">
-              <Link2 className="w-4 h-4 text-white" />
+            <span className="p-1.5 bg-indigo-50 text-indigo-700 rounded-lg">
+              <Link2 className="w-4 h-4 text-indigo-600" />
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-200">
-              Database Relationship Architecture
+            <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-700">
+              Relational Review Architecture
             </span>
           </div>
-          <h2 className="text-base font-bold text-white">
-            1 Reviewer ➔ Multiple Authors &nbsp;|&nbsp; 1 Paper ➔ Exactly 2 Assigned Reviewers
+          <h2 className="text-base font-bold text-slate-900">
+            1 Reviewer ➔ Multiple Authors &nbsp;|&nbsp; 1 Paper ➔ Exactly 2 Designated Reviewers
           </h2>
-          <p className="text-xs text-blue-100 font-medium">
-            Strict relational foreign keys: Each paper requires exactly two designated reviewers, and reviewers independently evaluate authors across multiple paper submissions.
+          <p className="text-xs text-slate-500 font-medium">
+            Strict relational schema: Each paper requires exactly two designated peer reviewers, and reviewers independently evaluate authors across multiple paper submissions.
           </p>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          <div className="bg-white/10 backdrop-blur-md px-3 py-2 rounded-xl border border-white/20 text-center">
-            <div className="text-lg font-bold text-white">{distinctAuthors}</div>
-            <div className="text-[10px] uppercase tracking-wider text-blue-200 font-semibold">
+          <div className="bg-slate-50 px-3.5 py-2 rounded-xl border border-slate-200/80 text-center">
+            <div className="text-lg font-bold text-slate-900 font-mono">{distinctAuthors}</div>
+            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">
               Authors Handled
             </div>
           </div>
-          <div className="bg-white/10 backdrop-blur-md px-3 py-2 rounded-xl border border-white/20 text-center">
-            <div className="text-lg font-bold text-white">{reviewers.length}</div>
-            <div className="text-[10px] uppercase tracking-wider text-blue-200 font-semibold">
+          <div className="bg-indigo-50 px-3.5 py-2 rounded-xl border border-indigo-100 text-center">
+            <div className="text-lg font-bold text-indigo-900 font-mono">{reviewers.length}</div>
+            <div className="text-[10px] uppercase tracking-wider text-indigo-700 font-bold">
               Reviewers
             </div>
           </div>

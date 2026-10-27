@@ -1,49 +1,61 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Lock, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck } from 'lucide-react';
+import { useFormik } from 'formik';
+import { Lock, CheckCircle2, AlertCircle, ArrowRight, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 import { useAppDispatch } from '../../app/store';
 import { activateAccountThunk } from '../../features/auth/authThunk';
+import { useToast } from '../../context/ToastContext';
+import { activateAccountSchema } from '../../utils/validationSchemas';
+import { FormInput } from '../../components/forms/common/FormInput';
 
 export const ActivateAccountPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
   const dispatch = useAppDispatch();
+  const toast = useToast();
 
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const formik = useFormik({
+    initialValues: {
+      password: '',
+      confirmPassword: '',
+    },
+    validationSchema: activateAccountSchema,
+    onSubmit: async (values) => {
+      if (!token) {
+        const msg = 'Activation token is missing from URL. Please use the exact link sent to your email.';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
 
-    if (!token) {
-      setError('Activation token is missing from URL. Please use the exact link sent to your email.');
-      return;
-    }
+      setError(null);
+      setIsLoading(true);
 
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters long.');
-      return;
-    }
+      try {
+        await dispatch(
+          activateAccountThunk({
+            token,
+            password: values.password,
+          })
+        ).unwrap();
 
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await dispatch(activateAccountThunk({ token, password })).unwrap();
-      setIsSuccess(true);
-    } catch (err: any) {
-      setError(err?.message || err || 'Account activation failed. The token may be invalid or expired.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        setIsSuccess(true);
+        toast.success('Account activated successfully! You may now sign in.');
+      } catch (err: any) {
+        const msg = err?.message || err || 'Account activation failed. The token may be invalid or expired.';
+        setError(msg);
+        toast.error(msg);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+  });
 
   return (
     <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-150">
@@ -63,7 +75,7 @@ export const ActivateAccountPage: React.FC = () => {
       {/* Main Card */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm space-y-5">
         {isSuccess ? (
-          <div className="text-center space-y-4 py-4">
+          <div className="text-center space-y-4 py-4 animate-in zoom-in-95">
             <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-6 h-6" />
             </div>
@@ -99,46 +111,58 @@ export const ActivateAccountPage: React.FC = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Create Password <span className="text-red-500 font-bold ml-0.5">*</span>
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 8 characters"
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
-                  />
-                </div>
-              </div>
+            <form onSubmit={formik.handleSubmit} className="space-y-4 text-xs" noValidate>
+              <FormInput
+                label="Create Password"
+                required
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                name="password"
+                placeholder="Minimum 8 characters"
+                value={formik.values.password}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.errors.password}
+                touched={formik.touched.password}
+                leftIcon={<Lock className="w-4 h-4" />}
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                }
+              />
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Confirm Password <span className="text-red-500 font-bold ml-0.5">*</span>
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="password"
-                    required
-                    minLength={8}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
-                  />
-                </div>
-              </div>
+              <FormInput
+                label="Confirm Password"
+                required
+                type={showConfirm ? 'text' : 'password'}
+                id="confirmPassword"
+                name="confirmPassword"
+                placeholder="Re-enter password"
+                value={formik.values.confirmPassword}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.errors.confirmPassword}
+                touched={formik.touched.confirmPassword}
+                leftIcon={<Lock className="w-4 h-4" />}
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    className="text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                }
+              />
 
               <button
                 type="submit"
-                disabled={isLoading || !token || !password || !confirmPassword}
+                disabled={isLoading || !token || !formik.isValid || !formik.values.password}
                 className="w-full py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span>{isLoading ? 'Activating Account...' : 'Activate Account & Set Password'}</span>

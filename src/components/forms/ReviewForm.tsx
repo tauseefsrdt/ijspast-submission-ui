@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
+import { useFormik } from 'formik';
 import { ReviewRecommendation } from '../../types/review.types';
 import { Send, Star, Shield, HelpCircle, CheckCircle2, Sparkles, Layers } from 'lucide-react';
+import { reviewSubmissionSchema } from '../../utils/validationSchemas';
+import { FormTextarea } from './common/FormTextarea';
+import { useToast } from '../../context/ToastContext';
 
 export const SRMU_CRITERIA = [
   'Relevance and significance of the topic',
@@ -21,7 +25,7 @@ interface ReviewFormProps {
   manuscriptTitle: string;
   reviewerId: string;
   reviewerName: string;
-  stage?: number; // 1 or 2
+  stage?: number;
   isRoundTwo?: boolean;
   authorReplyText?: string;
   onSubmit: (report: {
@@ -54,6 +58,7 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
   onSubmit,
   isLoading = false,
 }) => {
+  const toast = useToast();
   const isStage1 = stage === 1;
   const isRound2 = stage === 3 || Boolean(isRoundTwo);
 
@@ -67,25 +72,6 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
       ? [4, 4, 4, 4, 3, 4, 4, 4, 4, 3, 5]
       : [5, 4, 5, 4, 5, 4, 5, 5, 4, 5, 5]
   );
-
-  const [commentsForAuthor, setCommentsForAuthor] = useState(
-    isRound2
-      ? 'Second-Round Re-evaluation:\nThe revised manuscript successfully incorporates all requested corrections. The added benchmark comparisons and revised error statistics adequately resolve our prior concerns. The manuscript is recommended for publication.'
-      : isStage1
-      ? '1. Scope & Novelty: The submission addresses a relevant topic with strong potential. Please expand the literature review to include recent benchmark algorithms from 2024-2025.\n2. Methodology: Clarify the calibration error bounds and sensor drift compensations in Section 3.\n3. Visual Presentation: Enhance the resolution and font legibility of Figure 4.'
-      : 'Comprehensive Final Evaluation:\nThe authors have rigorously addressed all technical questions. The theoretical foundations are solid, experimental validations are robust, and statistical error analyses are verified. Recommended for publication.'
-  );
-
-  const [commentsForEditor, setCommentsForEditor] = useState(
-    isRound2
-      ? 'Round 2 Re-evaluation: Author revisions are satisfactory and address all reviewer directives. The paper meets IJSPAST publication standards and is recommended for acceptance.'
-      : isStage1
-      ? 'Stage 1 Preliminary Assessment: The paper falls squarely within IJSPAST aims and scope. The work is technically sound, but warrants minor revision on experimental calibration before final acceptance.'
-      : 'Stage 2 Final Evaluation: Solid scientific contribution ready for formal acceptance. The revisions and author explanations are thorough and convincing.'
-  );
-
-  const [confidentialComments, setConfidentialComments] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const recommendations: { label: ReviewRecommendation; desc: string }[] = [
     { label: 'Accept', desc: 'Accept as is without further revisions' },
@@ -102,57 +88,68 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
   const handleSetAllScores = (val: number) => {
     setScores(new Array(SRMU_CRITERIA.length).fill(val));
+    toast.info(`Scorecard updated: All criteria set to ${val}`);
   };
 
   const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: Record<string, string> = {};
+  const formik = useFormik({
+    initialValues: {
+      commentsForAuthor: isRound2
+        ? 'Second-Round Re-evaluation:\nThe revised manuscript successfully incorporates all requested corrections. The added benchmark comparisons and revised error statistics adequately resolve our prior concerns. The manuscript is recommended for publication.'
+        : isStage1
+        ? '1. Scope & Novelty: The submission addresses a relevant topic with strong potential. Please expand the literature review to include recent benchmark algorithms from 2024-2025.\n2. Methodology: Clarify the calibration error bounds and sensor drift compensations in Section 3.\n3. Visual Presentation: Enhance the resolution and font legibility of Figure 4.'
+        : 'Comprehensive Final Evaluation:\nThe authors have rigorously addressed all technical questions. The theoretical foundations are solid, experimental validations are robust, and statistical error analyses are verified. Recommended for publication.',
+      commentsForEditor: isRound2
+        ? 'Round 2 Re-evaluation: Author revisions are satisfactory and address all reviewer directives. The paper meets IJSPAST publication standards and is recommended for acceptance.'
+        : isStage1
+        ? 'Stage 1 Preliminary Assessment: The paper falls squarely within IJSPAST aims and scope. The work is technically sound, but warrants minor revision on experimental calibration before final acceptance.'
+        : 'Stage 2 Final Evaluation: Solid scientific contribution ready for formal acceptance. The revisions and author explanations are thorough and convincing.',
+      confidentialComments: '',
+    },
+    validationSchema: reviewSubmissionSchema,
+    onSubmit: async (values) => {
+      // Derived high-level ratings
+      const technicalQuality = Math.round((scores[0] + scores[4] + scores[5]) / 3);
+      const originality = Math.round((scores[1] + scores[2]) / 2);
+      const clarity = Math.round((scores[7] + scores[9]) / 2);
 
-    if (!commentsForAuthor.trim()) {
-      newErrors.commentsForAuthor = 'Constructive feedback for the author is required.';
-    }
-    if (!commentsForEditor.trim()) {
-      newErrors.commentsForEditor = 'Evaluation summary for the editor is required.';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    // Derived high-level ratings
-    const technicalQuality = Math.round((scores[0] + scores[4] + scores[5]) / 3);
-    const originality = Math.round((scores[1] + scores[2]) / 2);
-    const clarity = Math.round((scores[7] + scores[9]) / 2);
-
-    const stageTitle = isRound2
-      ? 'Round 2: Revision Re-evaluation'
-      : (isStage1
+      const stageTitle = isRound2
+        ? 'Round 2: Revision Re-evaluation'
+        : isStage1
         ? 'Stage 1: Initial Assessment'
-        : 'Stage 2: Final Evaluation');
+        : 'Stage 2: Final Evaluation';
 
-    onSubmit({
-      manuscriptId,
-      reviewerId,
-      reviewerName,
-      recommendation,
-      technicalQuality,
-      originality,
-      clarity,
-      commentsForAuthor: commentsForAuthor.trim(),
-      commentsForEditor: commentsForEditor.trim(),
-      confidentialComments: confidentialComments.trim() || undefined,
-      stage,
-      stageName: stageTitle,
-      rubricScores: scores,
-      overallScore: parseFloat(avgScore),
-    });
-  };
+      try {
+        await onSubmit({
+          manuscriptId,
+          reviewerId,
+          reviewerName,
+          recommendation,
+          technicalQuality,
+          originality,
+          clarity,
+          commentsForAuthor: values.commentsForAuthor.trim(),
+          commentsForEditor: values.commentsForEditor.trim(),
+          confidentialComments: values.confidentialComments.trim() || undefined,
+          stage,
+          stageName: stageTitle,
+          rubricScores: scores,
+          overallScore: parseFloat(avgScore),
+        });
+        toast.success(`Review report for ${manuscriptId} successfully submitted!`);
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to submit review report. Please try again.');
+      }
+    },
+  });
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6">
+    <form
+      onSubmit={formik.handleSubmit}
+      className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs space-y-6"
+      noValidate
+    >
       {/* Header with Stage Banner */}
       <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -301,56 +298,56 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
 
       {/* Comments for Author */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
-        <label className="text-xs font-bold text-slate-900 block uppercase tracking-wider">
-          3. Feedback for Author ({isStage1 ? 'Stage 1 Observations & Guidance' : 'Stage 2 Point-by-Point Evaluation'}) *
-        </label>
-        <p className="text-[11px] text-slate-500">
-          This feedback will be relayed to the authors (identities strictly masked).
-        </p>
-        <textarea
+        <FormTextarea
+          label={`3. Feedback for Author (${
+            isStage1 ? 'Stage 1 Observations & Guidance' : 'Stage 2 Point-by-Point Evaluation'
+          })`}
+          required
           rows={4}
-          value={commentsForAuthor}
-          onChange={(e) => setCommentsForAuthor(e.target.value)}
+          id="commentsForAuthor"
+          name="commentsForAuthor"
+          helperText="This feedback will be relayed to the authors (identities strictly masked)."
           placeholder="Detailed scientific critiques, constructive suggestions, and requested improvements..."
-          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
+          value={formik.values.commentsForAuthor}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.errors.commentsForAuthor}
+          touched={formik.touched.commentsForAuthor}
         />
-        {errors.commentsForAuthor && (
-          <p className="text-[11px] text-rose-600 font-medium">{errors.commentsForAuthor}</p>
-        )}
       </div>
 
       {/* Comments for Editor */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
-        <label className="text-xs font-bold text-slate-900 block uppercase tracking-wider">
-          4. Confidential Assessment for the Editor-in-Chief *
-        </label>
-        <p className="text-[11px] text-slate-500">
-          Direct remarks to the Editor explaining your evaluation reasoning and publication recommendation.
-        </p>
-        <textarea
+        <FormTextarea
+          label="4. Confidential Assessment for the Editor-in-Chief"
+          required
           rows={3}
-          value={commentsForEditor}
-          onChange={(e) => setCommentsForEditor(e.target.value)}
+          id="commentsForEditor"
+          name="commentsForEditor"
+          helperText="Direct remarks to the Editor explaining your evaluation reasoning and publication recommendation."
           placeholder="Summary evaluation notes for the Editorial Board..."
-          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
+          value={formik.values.commentsForEditor}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.errors.commentsForEditor}
+          touched={formik.touched.commentsForEditor}
         />
-        {errors.commentsForEditor && (
-          <p className="text-[11px] text-rose-600 font-medium">{errors.commentsForEditor}</p>
-        )}
       </div>
 
       {/* Confidential Notes */}
       <div className="space-y-2 pt-2 border-t border-slate-100">
-        <label className="text-xs font-bold text-amber-900 flex items-center gap-1.5 uppercase tracking-wider">
-          <Shield className="w-3.5 h-3.5 text-amber-600" />
-          <span>5. Additional Editorial Remarks (Optional)</span>
-        </label>
-        <textarea
+        <FormTextarea
+          label="5. Additional Editorial Remarks (Optional)"
           rows={2}
-          value={confidentialComments}
-          onChange={(e) => setConfidentialComments(e.target.value)}
-          placeholder="Suspected ethical concerns, duplicate submissions, or conflict of interest notes..."
-          className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
+          id="confidentialComments"
+          name="confidentialComments"
+          helperText="Suspected ethical concerns, duplicate submissions, or conflict of interest notes..."
+          placeholder="Optional remarks for editorial records..."
+          value={formik.values.confidentialComments}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.errors.confidentialComments}
+          touched={formik.touched.confidentialComments}
         />
       </div>
 
@@ -365,8 +362,8 @@ export const ReviewForm: React.FC<ReviewFormProps> = ({
         </span>
         <button
           type="submit"
-          disabled={isLoading}
-          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer"
+          disabled={isLoading || !formik.isValid}
+          className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors cursor-pointer disabled:opacity-50"
         >
           <Send className="w-4 h-4" />
           <span>

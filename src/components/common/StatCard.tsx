@@ -23,32 +23,39 @@ export const StatCard: React.FC<StatCardProps> = ({
 }) => {
   const colorMap = {
     indigo: {
-      bg: 'bg-indigo-50/80 text-indigo-700 border-indigo-100',
-      activeRing: 'ring-2 ring-indigo-500 border-indigo-300 bg-indigo-50/30',
+      stripe: 'from-blue-600 to-indigo-600',
+      bg: 'bg-indigo-50 text-indigo-700 border-indigo-200/80',
+      activeRing: 'ring-2 ring-blue-600 border-blue-400 bg-blue-50/20 shadow-md',
     },
     amber: {
-      bg: 'bg-amber-50/80 text-amber-700 border-amber-100',
-      activeRing: 'ring-2 ring-amber-500 border-amber-300 bg-amber-50/30',
+      stripe: 'from-amber-500 to-orange-500',
+      bg: 'bg-amber-50 text-amber-700 border-amber-200/80',
+      activeRing: 'ring-2 ring-amber-500 border-amber-400 bg-amber-50/20 shadow-md',
     },
     emerald: {
-      bg: 'bg-emerald-50/80 text-emerald-700 border-emerald-100',
-      activeRing: 'ring-2 ring-emerald-500 border-emerald-300 bg-emerald-50/30',
+      stripe: 'from-emerald-500 to-teal-500',
+      bg: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+      activeRing: 'ring-2 ring-emerald-500 border-emerald-400 bg-emerald-50/20 shadow-md',
     },
     rose: {
-      bg: 'bg-rose-50/80 text-rose-700 border-rose-100',
-      activeRing: 'ring-2 ring-rose-500 border-rose-300 bg-rose-50/30',
+      stripe: 'from-rose-500 to-pink-500',
+      bg: 'bg-rose-50 text-rose-700 border-rose-200/80',
+      activeRing: 'ring-2 ring-rose-500 border-rose-400 bg-rose-50/20 shadow-md',
     },
     blue: {
-      bg: 'bg-blue-50/80 text-blue-700 border-blue-100',
-      activeRing: 'ring-2 ring-blue-500 border-blue-300 bg-blue-50/30',
+      stripe: 'from-blue-500 to-cyan-500',
+      bg: 'bg-blue-50 text-blue-700 border-blue-200/80',
+      activeRing: 'ring-2 ring-blue-500 border-blue-400 bg-blue-50/20 shadow-md',
     },
     purple: {
-      bg: 'bg-purple-50/80 text-purple-700 border-purple-100',
-      activeRing: 'ring-2 ring-purple-500 border-purple-300 bg-purple-50/30',
+      stripe: 'from-purple-500 to-indigo-500',
+      bg: 'bg-purple-50 text-purple-700 border-purple-200/80',
+      activeRing: 'ring-2 ring-purple-500 border-purple-400 bg-purple-50/20 shadow-md',
     },
     slate: {
+      stripe: 'from-slate-600 to-slate-800',
       bg: 'bg-slate-100 text-slate-700 border-slate-200',
-      activeRing: 'ring-2 ring-slate-500 border-slate-300 bg-slate-50/50',
+      activeRing: 'ring-2 ring-slate-600 border-slate-400 bg-slate-100/60 shadow-md',
     },
   };
 
@@ -65,23 +72,26 @@ export const StatCard: React.FC<StatCardProps> = ({
           onClick();
         }
       }}
-      className={`group relative bg-white border border-slate-200/80 rounded-2xl p-5 shadow-2xs transition-all duration-200 ${
+      className={`group relative bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs transition-all duration-200 overflow-hidden ${
         onClick
           ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-slate-300 select-none'
           : ''
       } ${isActive ? scheme.activeRing : ''}`}
     >
-      <div className="flex items-start justify-between gap-3">
+      {/* Top Accent Gradient Stripe */}
+      <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${scheme.stripe}`} />
+
+      <div className="flex items-start justify-between gap-3 pt-1">
         <div className="space-y-1.5 min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
             {title}
           </p>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-extrabold tracking-tight text-slate-900 font-mono">
+            <span className="text-3xl font-black tracking-tight text-slate-900 font-mono">
               {value}
             </span>
             {badge && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                 {badge}
               </span>
             )}
@@ -95,7 +105,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
         {Icon && (
           <div
-            className={`p-2.5 rounded-xl border shrink-0 ${scheme.bg} transition-transform duration-200 group-hover:scale-105`}
+            className={`p-2.5 rounded-xl border shrink-0 ${scheme.bg} transition-transform duration-200 group-hover:scale-105 shadow-2xs`}
           >
             <Icon className="w-5 h-5" />
           </div>

@@ -80,51 +80,55 @@ export const AuthorDirectoryTable: React.FC = () => {
     <div className="space-y-6">
       {/* Top Banner / Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="relative overflow-hidden bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600" />
           <div className="p-3 bg-blue-50 text-blue-700 rounded-xl">
             <User className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{authors.length}</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl font-black font-mono tracking-tight text-slate-900">{authors.length}</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Total Authors
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="relative overflow-hidden bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-600 to-purple-600" />
           <div className="p-3 bg-indigo-50 text-indigo-700 rounded-xl">
             <BookOpen className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{totalPapersCount}</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl font-black font-mono tracking-tight text-slate-900">{totalPapersCount}</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Submitted Papers
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="relative overflow-hidden bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
           <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{dualReviewerPapersCount}</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl font-black font-mono tracking-tight text-slate-900">{dualReviewerPapersCount}</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Papers with Dual Reviewers
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="relative overflow-hidden bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
           <div className="p-3 bg-amber-50 text-amber-700 rounded-xl">
             <Award className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">
+            <div className="text-2xl font-black font-mono tracking-tight text-slate-900">
               {authors.length > 0 ? (totalPapersCount / authors.length).toFixed(1) : '0'}
             </div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Avg Papers / Author
             </div>
           </div>

@@ -32,25 +32,26 @@ export const OutboxPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       {/* Header Banner */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-xs font-bold">
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#071526] via-[#0a2540] to-[#0f4a85] rounded-3xl p-6 sm:p-7 shadow-xl border border-slate-700/60 text-white flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="space-y-1.5 relative z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 text-xs font-bold tracking-wide">
             <Mail className="w-3.5 h-3.5" />
             <span>Dispatched Mail Audit Log</span>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             Dispatched Notifications &amp; Credentials Outbox
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
+          <p className="text-xs sm:text-sm text-slate-300 max-w-2xl">
             Audit system emails containing generated author login credentials, peer reviewer invitations, and editorial lifecycle notices.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 relative z-10">
           <button
             type="button"
             onClick={handleRefresh}
-            className="p-2.5 text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            className="p-2.5 text-slate-300 hover:text-white border border-slate-700 hover:bg-slate-800/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
             title="Refresh outbox"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -64,13 +65,13 @@ export const OutboxPage: React.FC = () => {
               placeholder="Search recipient or ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-9 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
+              className="w-full pl-10 pr-9 py-2 bg-slate-900/80 border border-slate-700/80 text-white placeholder-slate-400 rounded-xl text-xs focus:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-0.5 rounded cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

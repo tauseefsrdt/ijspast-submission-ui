@@ -260,16 +260,19 @@ export const EditorDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      {/* Editorial Control Center Hero Header */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="space-y-1.5">
+      {/* Editorial Control Center Hero Header - SRMU Journal Deep Navy & Gold Theme */}
+      <div className="bg-gradient-to-br from-[#071526] via-[#0a2540] to-[#0f4a85] text-white border border-slate-700/60 rounded-3xl p-6 sm:p-7 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5 relative overflow-hidden">
+        {/* Subtle ambient light glow */}
+        <div className="absolute -right-20 -top-20 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="space-y-2 relative z-10">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold">
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 text-xs font-bold tracking-wide">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
               <span>Editorial Control Center</span>
             </span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-slate-400">
-              <Calendar className="w-3.5 h-3.5" />
+            <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-slate-300">
+              <Calendar className="w-3.5 h-3.5 text-slate-400" />
               {new Date().toLocaleDateString(undefined, {
                 weekday: 'short',
                 year: 'numeric',
@@ -279,24 +282,24 @@ export const EditorDashboard: React.FC = () => {
             </span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             Editorial Workflow &amp; Submissions Manager
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
+          <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
             Administer double-blind peer review lifecycle, manage dual reviewer assignments, and oversee open-access publishing operations.
           </p>
         </div>
 
         {/* Global Action Toolbar */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0 relative z-10">
           <button
             type="button"
             onClick={handleRefresh}
-            className="p-2.5 text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+            className="p-2.5 text-slate-200 hover:text-white border border-white/10 hover:bg-white/10 bg-white/5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
             title="Refresh database feed"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isLoading || isReviewersLoading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span className="hidden sm:inline">Refresh Feed</span>
           </button>
 
           <button
@@ -305,7 +308,7 @@ export const EditorDashboard: React.FC = () => {
               setCreatedCredentials(null);
               setIsCreateReviewerOpen(true);
             }}
-            className="px-4 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors cursor-pointer"
+            className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 rounded-xl text-xs font-black flex items-center gap-2 shadow-md shadow-amber-500/25 transition-all cursor-pointer ring-1 ring-amber-300/40"
           >
             <Plus className="w-4 h-4" />
             <span>Enroll Reviewer</span>
@@ -396,22 +399,22 @@ export const EditorDashboard: React.FC = () => {
         />
       </div>
 
-      {/* Main Segmented Navigation Bar */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-1.5 shadow-2xs flex flex-wrap items-center gap-1.5 overflow-x-auto">
+      {/* Main Segmented Navigation Bar - SRMU Journal Navy & Gold Theme */}
+      <div className="bg-[#071526] border border-slate-800/80 rounded-2xl p-1.5 shadow-md flex flex-wrap items-center gap-1.5 overflow-x-auto text-slate-300">
         <button
           type="button"
           onClick={() => setActiveTab('queue')}
           className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
             activeTab === 'queue'
-              ? 'bg-[#0d3b6e] text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
           }`}
         >
           <FileText className="w-4 h-4" />
           <span>Submissions Queue</span>
           <span
             className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-              activeTab === 'queue' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+              activeTab === 'queue' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
             }`}
           >
             {displayedManuscripts.length}
@@ -423,8 +426,8 @@ export const EditorDashboard: React.FC = () => {
           onClick={() => setActiveTab('authors')}
           className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
             activeTab === 'authors'
-              ? 'bg-[#0d3b6e] text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
           }`}
         >
           <User className="w-4 h-4" />
@@ -436,8 +439,8 @@ export const EditorDashboard: React.FC = () => {
           onClick={() => setActiveTab('reviewersTable')}
           className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
             activeTab === 'reviewersTable'
-              ? 'bg-[#0d3b6e] text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
           }`}
         >
           <Briefcase className="w-4 h-4" />
@@ -449,15 +452,15 @@ export const EditorDashboard: React.FC = () => {
           onClick={() => setActiveTab('reviewers')}
           className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
             activeTab === 'reviewers'
-              ? 'bg-[#0d3b6e] text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
           }`}
         >
           <Users className="w-4 h-4" />
           <span>Reviewers Directory</span>
           <span
             className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-              activeTab === 'reviewers' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+              activeTab === 'reviewers' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
             }`}
           >
             {reviewers.length}
@@ -469,8 +472,8 @@ export const EditorDashboard: React.FC = () => {
           onClick={() => setActiveTab('feedback')}
           className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
             activeTab === 'feedback'
-              ? 'bg-[#0d3b6e] text-white shadow-xs'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
           }`}
         >
           <Layers className="w-4 h-4" />

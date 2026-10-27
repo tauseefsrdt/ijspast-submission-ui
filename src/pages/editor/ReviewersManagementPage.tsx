@@ -168,28 +168,29 @@ export const ReviewersManagementPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
       {/* Top Header Card */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#071526] via-[#0a2540] to-[#0f4a85] rounded-3xl border border-slate-700/60 p-6 sm:p-8 shadow-xl text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="absolute -top-12 -right-12 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-700 border border-purple-200">
+            <span className="text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30">
               Editorial Board Office
             </span>
             <span className="text-xs text-slate-400 font-semibold">•</span>
-            <span className="text-xs text-slate-500 font-semibold">SRMU Peer Review Directory</span>
+            <span className="text-xs text-slate-300 font-semibold">SRMU Peer Review Directory</span>
           </div>
-          <h1 className="text-2xl font-black text-[#0d3b6e] tracking-tight mt-1">
+          <h1 className="text-2xl font-black text-white tracking-tight mt-1.5">
             Faculty &amp; Peer Reviewers Directory
           </h1>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-300 mt-1 max-w-2xl">
             Manage enrolled subject specialists, inspect dual-reviewer workloads, or invite new faculty reviewers to the journal board.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 relative z-10 shrink-0">
           <button
             type="button"
             onClick={() => dispatch(fetchReviewers())}
-            className="p-2.5 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
+            className="p-2.5 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800/80 rounded-xl transition-colors cursor-pointer shadow-xs"
             title="Refresh reviewer database"
           >
             <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
@@ -201,7 +202,7 @@ export const ReviewersManagementPage: React.FC = () => {
               setCreatedCredentials(null);
               setIsModalOpen(true);
             }}
-            className="px-4 py-2.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center gap-2 cursor-pointer ring-1 ring-amber-300/40"
           >
             <Plus className="w-4 h-4" />
             <span>Enroll New Reviewer</span>
@@ -309,7 +310,7 @@ export const ReviewersManagementPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => handleOpenAssignModal(rev)}
-                  className="px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <UserCheck className="w-3.5 h-3.5" />
                   <span>Assign Paper</span>

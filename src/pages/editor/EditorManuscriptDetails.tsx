@@ -718,46 +718,48 @@ export const EditorManuscriptDetails: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-slate-200">
-        <div className="flex gap-4">
-          <button
-            type="button"
-            onClick={() => setActiveTab('overview')}
-            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors ${
-              activeTab === 'overview'
-                ? 'border-[#0d3b6e] text-[#0d3b6e]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
+      {/* Tabs - SRMU Journal Navy & Gold Theme */}
+      <div className="bg-[#071526] border border-slate-800/80 rounded-2xl p-1.5 shadow-md flex items-center gap-1.5 text-slate-300 overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab('overview')}
+          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all ${
+            activeTab === 'overview'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          Manuscript Scope &amp; Files
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('reviewReport')}
+          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center gap-2 ${
+            activeTab === 'reviewReport'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <span>Reviewer Evaluation Reports</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              activeTab === 'reviewReport' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
             }`}
           >
-            Manuscript Scope &amp; Files
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('reviewReport')}
-            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5 ${
-              activeTab === 'reviewReport'
-                ? 'border-[#0d3b6e] text-[#0d3b6e]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            <span>Reviewer Evaluation Reports</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 font-bold">
-              {reviews.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('history')}
-            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors ${
-              activeTab === 'history'
-                ? 'border-[#0d3b6e] text-[#0d3b6e]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
-          >
-            Workflow Audit History
-          </button>
-        </div>
+            {reviews.length}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('history')}
+          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all ${
+            activeTab === 'history'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          Workflow Audit History
+        </button>
       </div>
 
       {/* Tab 1: Overview */}

@@ -2,34 +2,47 @@
 
 @layer base {
   :root {
-    --bg: #f3f6fb;
+    --navy-primary: #0a2540;
+    --navy-secondary: #0f4a85;
+    --navy-dark: #071526;
+    --gold-accent: #f59e0b;
+    --gold-light: #fef3c7;
+    --gold-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #d97706 100%);
+    --surface-bg: #f8fafc;
+    --surface-card: #ffffff;
+    --ink-primary: #0f172a;
+    --ink-secondary: #475569;
+    --ink-muted: #94a3b8;
+    --border-subtle: #e2e8f0;
+
+    --bg: #f8fafc;
     --surface: #ffffff;
-    --surface2: #eaf0f8;
-    --fg: #14233a;
-    --muted: #55657d;
-    --line: #d5deeb;
-    --navy: #0d3b6e;
-    --navy2: #0a2d54;
+    --surface2: #f1f5f9;
+    --fg: #0f172a;
+    --muted: #475569;
+    --line: #e2e8f0;
+    --navy: #0a2540;
+    --navy2: #071526;
     --navy-fg: #ffffff;
-    --gold: #f2b01e;
-    --gold-fg: #1d1600;
-    --primary: #0d3b6e;
+    --gold: #f59e0b;
+    --gold-fg: #0f172a;
+    --primary: #0a2540;
     --primary-fg: #ffffff;
-    --link: #0b5cad;
-    --ok: #13663c;
-    --okbg: #e1f4e9;
-    --warn: #7d5200;
-    --warnbg: #fff0cc;
-    --bad: #a8231b;
-    --badbg: #fde3e0;
-    --info: #1a5a9f;
-    --infobg: #e0ecfa;
+    --link: #0f4a85;
+    --ok: #10b981;
+    --okbg: #ecfdf5;
+    --warn: #f59e0b;
+    --warnbg: #fffbeb;
+    --bad: #ef4444;
+    --badbg: #fef2f2;
+    --info: #0ea5e9;
+    --infobg: #f0f9ff;
   }
 
   body {
-    background-color: var(--bg);
-    color: var(--fg);
-    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    background-color: var(--surface-bg);
+    color: var(--ink-primary);
+    font-family: 'Rubik', system-ui, -apple-system, sans-serif;
   }
 
   .mono {

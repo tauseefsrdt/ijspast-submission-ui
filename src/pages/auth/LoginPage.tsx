@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Shield,
   UserCheck,
+  Sparkles,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
@@ -81,33 +82,37 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-md space-y-6 animate-in fade-in zoom-in-95 duration-150">
-      {/* Title Card */}
-      <div className="text-center space-y-2">
-        <div className="w-12 h-12 rounded-2xl bg-[#0d3b6e] text-amber-400 font-extrabold flex items-center justify-center text-lg mx-auto shadow-md">
-          IJ
-        </div>
-        <h1 className="text-2xl font-extrabold text-[#0d3b6e] tracking-tight">
-          Portal Sign In
-        </h1>
-        <p className="text-xs text-slate-500">
-          International Journal of Scientific Progress in Applied Science &amp; Technology
-        </p>
-      </div>
+      {/* Flagship Hero Card - Exact SRMU Journal Deep Navy & Gold Theme */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#071526] via-[#0a2540] to-[#0f4a85] rounded-3xl p-7 sm:p-9 shadow-2xl border border-slate-700/60 text-white space-y-5">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500" />
 
-      {/* Login Card */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm space-y-5">
+        {/* Card Header */}
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/15 text-amber-300 border border-amber-400/30 text-xs font-bold tracking-wide">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Portal Authentication</span>
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            Access Your Workspace
+          </h1>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Sign in as Author, Peer Reviewer, or Editorial Office to access manuscript submissions and reviews.
+          </p>
+        </div>
+
         {/* Role Portal Mode Selector */}
-        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-bold text-slate-600">
+        <div className="grid grid-cols-2 p-1.5 bg-[#071526]/90 border border-slate-700/80 rounded-2xl text-xs font-bold text-slate-300">
           <button
             type="button"
             onClick={() => {
               setPortalMode('author_reviewer');
               dispatch(clearAuthError());
             }}
-            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               portalMode === 'author_reviewer'
-                ? 'bg-white text-[#0d3b6e] shadow-xs'
-                : 'hover:text-slate-900'
+                ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/25'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
             <UserCheck className="w-3.5 h-3.5" />
@@ -119,10 +124,10 @@ export const LoginPage: React.FC = () => {
               setPortalMode('editor');
               dispatch(clearAuthError());
             }}
-            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+            className={`py-2 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
               portalMode === 'editor'
-                ? 'bg-white text-[#0d3b6e] shadow-xs'
-                : 'hover:text-slate-900'
+                ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md shadow-amber-500/25'
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
             }`}
           >
             <Shield className="w-3.5 h-3.5" />
@@ -131,14 +136,15 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {error && (
-          <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-800 text-xs font-medium animate-in fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
+          <div className="p-3.5 bg-rose-950/40 border border-rose-800/60 rounded-xl flex items-start gap-2.5 text-rose-200 text-xs font-medium animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={formik.handleSubmit} className="space-y-4 text-xs" noValidate>
           <FormInput
+            variant="dark"
             label="Registered Institutional Email"
             required
             type="email"
@@ -155,6 +161,7 @@ export const LoginPage: React.FC = () => {
 
           <div>
             <FormInput
+              variant="dark"
               label="Password"
               required
               type="password"
@@ -173,17 +180,17 @@ export const LoginPage: React.FC = () => {
                 Author & Reviewer: Can use Forgot Password to reset via email OTP.
                 Editor: Cannot change or reset password. Do not show Forgot Password option. */}
             {!isEditorMode ? (
-              <div className="flex justify-end mt-1.5">
+              <div className="flex justify-end mt-2">
                 <Link
                   to="/forgot-password"
-                  className="text-xs font-semibold text-[#0d3b6e] hover:text-[#092b52] hover:underline transition-colors"
+                  className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors"
                 >
                   Forgot Password?
                 </Link>
               </div>
             ) : (
-              <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200/90 rounded-xl flex items-start gap-2 text-slate-500 text-[11px] leading-tight">
-                <Shield className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+              <div className="mt-2.5 p-2.5 bg-[#071526]/80 border border-slate-700/80 rounded-xl flex items-start gap-2 text-slate-300 text-[11px] leading-tight">
+                <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
                 <span>
                   Editor credentials are centrally managed by system administration. Self-service password reset is disabled for editor accounts.
                 </span>
@@ -194,9 +201,9 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading || !formik.isValid || !formik.values.email || !formik.values.password}
-            className="w-full py-3 bg-[#0d3b6e] hover:bg-[#092b52] text-white font-extrabold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-amber-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <span>{isLoading ? 'Authenticating with Server...' : 'Sign In to Dashboard'}</span>
+            <span>{isLoading ? 'Authenticating with Server...' : 'Sign In to Workspace'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>

@@ -137,16 +137,16 @@ export const ManuscriptTable: React.FC<ManuscriptTableProps> = ({
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-slate-50/80 border-b border-slate-200/80 text-slate-500 font-bold uppercase text-[10px] tracking-wider select-none">
-                <th className="py-3 px-4 sm:px-6">Manuscript ID</th>
-                <th className="py-3 px-4">Title &amp; Subject Domain</th>
+              <tr className="bg-[#071526] border-b border-slate-800 text-slate-300 font-bold uppercase text-[10px] tracking-wider select-none">
+                <th className="py-3.5 px-4 sm:px-6">Manuscript ID</th>
+                <th className="py-3.5 px-4">Title &amp; Subject Domain</th>
                 {currentRole === 'editor' && (
-                  <th className="py-3 px-4">Corresponding Author</th>
+                  <th className="py-3.5 px-4">Corresponding Author</th>
                 )}
-                {showReviewerColumn && <th className="py-3 px-4">Assigned Peer Reviewers</th>}
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 sm:px-6 text-right">Action</th>
+                {showReviewerColumn && <th className="py-3.5 px-4">Assigned Peer Reviewers</th>}
+                <th className="py-3.5 px-4">Date</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4 sm:px-6 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -169,7 +169,7 @@ export const ManuscriptTable: React.FC<ManuscriptTableProps> = ({
 
                     {/* Title & Domain */}
                     <td className="py-4 px-4 max-w-xs md:max-w-md">
-                      <p className="font-bold text-slate-900 group-hover:text-indigo-600 line-clamp-1 transition-colors leading-snug">
+                      <p className="font-bold text-slate-900 group-hover:text-blue-700 line-clamp-1 transition-colors leading-snug">
                         {m.title}
                       </p>
                       <p className="text-[11px] text-slate-500 font-medium line-clamp-1 mt-0.5">
@@ -233,7 +233,7 @@ export const ManuscriptTable: React.FC<ManuscriptTableProps> = ({
                           e.stopPropagation();
                           handleRowClick(m);
                         }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 rounded-xl transition-all cursor-pointer border border-indigo-100/60 shadow-2xs group-hover:bg-indigo-600 group-hover:text-white"
+                        className="inline-flex items-center gap-1 px-3.5 py-1.5 text-xs font-black text-slate-950 bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 hover:from-amber-400 hover:to-amber-300 rounded-xl transition-all cursor-pointer shadow-xs group-hover:shadow-md"
                       >
                         <span>View</span>
                         <ChevronRight className="w-3.5 h-3.5" />

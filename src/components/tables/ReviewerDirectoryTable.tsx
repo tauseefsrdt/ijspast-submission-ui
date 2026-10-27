@@ -127,49 +127,53 @@ export const ReviewerDirectoryTable: React.FC = () => {
 
       {/* KPI Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="relative overflow-hidden bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-purple-600 to-indigo-600" />
           <div className="p-3 bg-purple-50 text-purple-700 rounded-xl">
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{reviewers.length}</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl font-black font-mono tracking-tight text-slate-900">{reviewers.length}</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Total Reviewers
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="relative overflow-hidden bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600" />
           <div className="p-3 bg-indigo-50 text-indigo-700 rounded-xl">
             <Briefcase className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{totalAssignments}</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl font-black font-mono tracking-tight text-slate-900">{totalAssignments}</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Total Paper Assignments
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="relative overflow-hidden bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
           <div className="p-3 bg-amber-50 text-amber-700 rounded-xl">
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{totalActive}</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl font-black font-mono tracking-tight text-slate-900">{totalActive}</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Active Reviews
             </div>
           </div>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex items-center gap-4">
+        <div className="relative overflow-hidden bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500" />
           <div className="p-3 bg-emerald-50 text-emerald-700 rounded-xl">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <div className="text-2xl font-bold text-slate-900">{totalCompleted}</div>
-            <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="text-2xl font-black font-mono tracking-tight text-slate-900">{totalCompleted}</div>
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
               Completed Reviews
             </div>
           </div>

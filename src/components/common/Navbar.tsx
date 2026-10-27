@@ -12,7 +12,9 @@ import {
   Shield,
   Layers,
   Building,
+  KeyRound,
 } from 'lucide-react';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 interface NavbarProps {
   onToggleSidebar?: () => void;
@@ -23,6 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
@@ -113,6 +116,23 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
                 </span>
               </div>
 
+              {/* Only Author and Reviewer can change password. Editor credentials cannot be changed. */}
+              {(user?.role === 'author' || user?.role === 'reviewer') && (
+                <div className="py-1 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      setChangePasswordOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+                    <span>Change Password</span>
+                  </button>
+                </div>
+              )}
+
               <div className="border-t border-slate-100 pt-2">
                 <button
                   type="button"
@@ -137,6 +157,12 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
           <LogOut className="w-4 h-4" />
         </button>
       </div>
+
+      {/* Change Password Modal (Authors and Reviewers only) */}
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </header>
   );
 };

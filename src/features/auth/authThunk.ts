@@ -49,23 +49,55 @@ export const forgotPasswordThunk = createAsyncThunk(
   async (email: string, { rejectWithValue }) => {
     try {
       const res: any = await axiosInstance.post('/auth/forgot-password', { email: email.trim() });
-      return res.data;
+      return res;
     } catch (err: any) {
-      return rejectWithValue(err.message || 'Failed to request password reset');
+      return rejectWithValue(err.message || 'Failed to dispatch password reset OTP');
+    }
+  }
+);
+
+export const resendOtpThunk = createAsyncThunk(
+  'auth/resendOtp',
+  async (email: string, { rejectWithValue }) => {
+    try {
+      const res: any = await axiosInstance.post('/auth/resend-otp', { email: email.trim() });
+      return res;
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Failed to resend verification OTP');
+    }
+  }
+);
+
+export const verifyOtpThunk = createAsyncThunk(
+  'auth/verifyOtp',
+  async ({ email, otp }: { email: string; otp: string }, { rejectWithValue }) => {
+    try {
+      const res: any = await axiosInstance.post('/auth/verify-otp', {
+        email: email.trim(),
+        otp: otp.trim(),
+      });
+      return res.data; // contains { resetToken, email, message }
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'OTP verification failed');
     }
   }
 );
 
 export const resetPasswordThunk = createAsyncThunk(
   'auth/resetPassword',
-  async ({ token, newPassword }: { token: string; newPassword: string }, { rejectWithValue }) => {
+  async (
+    payload: { token: string; newPassword: string; confirmPassword?: string; email?: string; otp?: string },
+    { rejectWithValue }
+  ) => {
     try {
       const res: any = await axiosInstance.post('/auth/reset-password', {
-        token: token.trim(),
-        newPassword,
-        confirmPassword: newPassword,
+        token: payload.token.trim(),
+        newPassword: payload.newPassword,
+        confirmPassword: payload.confirmPassword || payload.newPassword,
+        email: payload.email?.trim(),
+        otp: payload.otp?.trim(),
       });
-      return res.data;
+      return res;
     } catch (err: any) {
       return rejectWithValue(err.message || 'Failed to reset password');
     }

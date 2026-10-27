@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { loginUser, clearAuthError } from '../../store/slices/authSlice';
 import {
@@ -8,12 +8,20 @@ import {
   ArrowRight,
   AlertCircle,
   BookOpen,
+  Shield,
+  UserCheck,
 } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isAuthenticated, isLoading, error } = useAppSelector((state) => state.auth);
+
+  const initialRole = searchParams.get('role');
+  const [portalMode, setPortalMode] = useState<'author_reviewer' | 'editor'>(
+    initialRole === 'editor' ? 'editor' : 'author_reviewer'
+  );
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -24,8 +32,12 @@ export const LoginPage: React.FC = () => {
     }
   }, [isAuthenticated, user, navigate]);
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(
+    initialRole === 'editor' ? '' : ''
+  );
   const [password, setPassword] = useState('');
+
+  const isEditorMode = portalMode === 'editor';
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +72,39 @@ export const LoginPage: React.FC = () => {
 
       {/* Login Card */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-sm space-y-5">
+        {/* Role Portal Mode Selector */}
+        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-bold text-slate-600">
+          <button
+            type="button"
+            onClick={() => {
+              setPortalMode('author_reviewer');
+              dispatch(clearAuthError());
+            }}
+            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${portalMode === 'author_reviewer'
+              ? 'bg-white text-[#0d3b6e] shadow-xs'
+              : 'hover:text-slate-900'
+              }`}
+          >
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>Author / Reviewer</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPortalMode('editor');
+              dispatch(clearAuthError());
+
+            }}
+            className={`py-2 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer ${portalMode === 'editor'
+              ? 'bg-white text-[#0d3b6e] shadow-xs'
+              : 'hover:text-slate-900'
+              }`}
+          >
+            <Shield className="w-3.5 h-3.5" />
+            <span>Editorial Office</span>
+          </button>
+        </div>
+
         {error && (
           <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-800 text-xs font-medium animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
@@ -79,7 +124,7 @@ export const LoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@university.edu"
+                placeholder={isEditorMode ? "E-mail Id" : "E-mail Id"}
                 className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
               />
             </div>
@@ -102,6 +147,27 @@ export const LoginPage: React.FC = () => {
                 className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20"
               />
             </div>
+
+            {/* Password Management Rules:
+                Author & Reviewer: Can use Forgot Password to reset via email OTP.
+                Editor: Cannot change or reset password. Do not show Forgot Password option. */}
+            {!isEditorMode ? (
+              <div className="flex justify-end mt-1.5">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-semibold text-[#0d3b6e] hover:text-[#092b52] hover:underline transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+            ) : (
+              <div className="mt-2 p-2.5 bg-slate-50 border border-slate-200/90 rounded-xl flex items-start gap-2 text-slate-500 text-[11px] leading-tight">
+                <Shield className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                <span>
+                  Editor credentials are centrally managed by system administration. Self-service password reset is disabled for editor accounts.
+                </span>
+              </div>
+            )}
           </div>
 
           <button
@@ -114,35 +180,7 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Public Author Submission Link (No login needed) */}
-        <div className="pt-4 border-t border-slate-100">
-          <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl space-y-1.5 text-center">
-            <span className="text-[11px] font-bold text-amber-900 block">
-              Submitting a New Manuscript?
-            </span>
-            <p className="text-[11px] text-amber-800 leading-tight">
-              No prior login required! Authors submit directly on our public portal, and credentials are dispatched automatically.
-            </p>
-            <Link
-              to="/submit"
-              className="inline-flex items-center justify-center gap-1.5 w-full py-2 bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-lg transition-colors cursor-pointer mt-1"
-            >
-              <span>Go to Public Submission Portal</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
 
-        {/* Public Archive Link */}
-        <div className="text-center pt-1">
-          <Link
-            to="/published"
-            className="text-xs text-slate-500 hover:text-[#0d3b6e] font-medium inline-flex items-center gap-1.5"
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>Browse Open Access Archive</span>
-          </Link>
-        </div>
       </div>
     </div>
   );

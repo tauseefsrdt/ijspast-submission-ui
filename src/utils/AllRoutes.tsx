@@ -8,6 +8,7 @@ import { RoleBasedRoute } from '../routes/RoleBasedRoute';
 
 // Page imports
 import { LoginPage } from '../pages/auth/LoginPage';
+import { ForgotPasswordPage } from '../pages/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '../pages/auth/ResetPasswordPage';
 import { ActivateAccountPage } from '../pages/auth/ActivateAccountPage';
 import { SubmitManuscriptPage } from '../pages/author/SubmitManuscriptPage';
@@ -66,6 +67,10 @@ export const routes: RouteObject[] = [
           {
             path: "login",
             element: <LoginPage />,
+          },
+          {
+            path: "forgot-password",
+            element: <ForgotPasswordPage />,
           },
           {
             path: "reset-password",

@@ -26,3 +26,26 @@ export interface LoginCredentials {
   password?: string;
   role?: UserRole;
 }
+
+export interface VerifyOtpPayload {
+  email: string;
+  otp: string;
+}
+
+export interface VerifyOtpResponse {
+  resetToken: string;
+  email: string;
+  message: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  newPassword: string;
+  confirmPassword?: string;
+  email?: string;
+  otp?: string;
+}
+
+export interface ResendOtpPayload {
+  email: string;
+}

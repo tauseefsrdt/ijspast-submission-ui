@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchAuthorManuscripts } from '../../store/slices/manuscriptSlice';
@@ -14,13 +14,16 @@ import {
   Plus,
   Sparkles,
   RefreshCw,
+  KeyRound,
 } from 'lucide-react';
+import { ChangePasswordModal } from '../../components/common/ChangePasswordModal';
 
 export const AuthorDashboard: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const { manuscripts, isLoading } = useAppSelector((state) => state.manuscripts);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchAuthorManuscripts());
@@ -68,6 +71,15 @@ export const AuthorDashboard: React.FC = () => {
           </button>
           <button
             type="button"
+            onClick={() => setChangePasswordOpen(true)}
+            className="p-2.5 text-slate-600 hover:text-[#0d3b6e] border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Change Account Password"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline">Change Password</span>
+          </button>
+          <button
+            type="button"
             onClick={() => navigate('/submit')}
             className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-extrabold text-xs px-5 py-3 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2 self-start sm:self-auto"
           >
@@ -76,6 +88,11 @@ export const AuthorDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
 
       {/* KPI Cards Strip */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">

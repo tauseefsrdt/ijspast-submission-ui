@@ -85,11 +85,20 @@ export const ResetPasswordPage: React.FC = () => {
         ) : (
           <>
             {!token && (
-              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5 text-amber-800 text-xs font-medium">
-                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
-                <span>
-                  No reset token detected in URL query parameter. Please click the exact reset link provided in your email.
-                </span>
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl space-y-2 text-amber-800 text-xs font-medium">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5" />
+                  <span>
+                    No reset token detected in URL query parameter.
+                  </span>
+                </div>
+                <Link
+                  to="/forgot-password"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0d3b6e] hover:underline"
+                >
+                  <span>Use OTP Password Reset instead</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
             )}
 

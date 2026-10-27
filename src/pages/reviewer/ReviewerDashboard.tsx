@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../store';
 import { fetchReviewerManuscripts } from '../../store/slices/manuscriptSlice';
@@ -11,12 +11,15 @@ import {
   CheckCircle2,
   Sparkles,
   RefreshCw,
+  KeyRound,
 } from 'lucide-react';
+import { ChangePasswordModal } from '../../components/common/ChangePasswordModal';
 
 export const ReviewerDashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
   const { manuscripts, isLoading } = useAppSelector((state) => state.manuscripts);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   useEffect(() => {
     dispatch(fetchReviewerManuscripts());
@@ -56,16 +59,32 @@ export const ReviewerDashboard: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => dispatch(fetchReviewerManuscripts())}
-          className="p-2.5 text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-          title="Refresh assignments"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => dispatch(fetchReviewerManuscripts())}
+            className="p-2.5 text-slate-600 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Refresh assignments"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setChangePasswordOpen(true)}
+            className="p-2.5 text-slate-600 hover:text-[#0d3b6e] border border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Change Account Password"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+            <span>Change Password</span>
+          </button>
+        </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

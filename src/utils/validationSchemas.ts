@@ -25,12 +25,7 @@ export const forgotPasswordEmailSchema = Yup.object().shape({
   email: Yup.string()
     .trim()
     .email('Please enter a valid institutional email address')
-    .required('Registered institutional email is required')
-    .test(
-      'not-editor',
-      'Editor accounts cannot be reset via the portal. Editor credentials are managed centrally by system administration.',
-      (val) => !val || !val.trim().toLowerCase().startsWith('editor@')
-    ),
+    .required('Registered institutional email is required'),
 });
 
 /**

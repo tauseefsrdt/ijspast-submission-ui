@@ -9,6 +9,7 @@ import {
 } from '../../features/manuscripts/manuscriptThunk';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { RevisionForm } from '../../components/forms/RevisionForm';
+import { EditorAuthorChat } from '../../components/common/EditorAuthorChat';
 import {
   ArrowLeft,
   FileText,
@@ -21,6 +22,7 @@ import {
   History,
   RotateCcw,
   BookOpen,
+  MessageSquare,
 } from 'lucide-react';
 
 export const AuthorManuscriptDetails: React.FC = () => {
@@ -31,7 +33,7 @@ export const AuthorManuscriptDetails: React.FC = () => {
   const { user } = useAppSelector((state) => state.auth);
   const { manuscripts, isLoading } = useAppSelector((state) => state.manuscripts);
 
-  const [activeTab, setActiveTab] = useState<'details' | 'files' | 'feedback' | 'history'>('details');
+  const [activeTab, setActiveTab] = useState<'details' | 'files' | 'feedback' | 'communications' | 'history'>('details');
 
   const manuscript = manuscripts.find((m) => m.id === id);
 
@@ -185,6 +187,23 @@ export const AuthorManuscriptDetails: React.FC = () => {
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab('communications')}
+            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5 ${
+              activeTab === 'communications'
+                ? 'border-[#0d3b6e] text-[#0d3b6e]'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Editor Communications</span>
+            {manuscript.canCommunicate && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-100 text-blue-800 font-bold">
+                {manuscript.communicationExchanges || 0}/5
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab('history')}
             className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors ${
               activeTab === 'history'
@@ -317,6 +336,7 @@ export const AuthorManuscriptDetails: React.FC = () => {
             <RevisionForm
               manuscriptId={manuscript.id}
               revisionRequestComments={manuscript.revisionRequestComments}
+              editorComments={manuscript.editorComments}
               onSubmit={handleRevisionSubmit}
               isLoading={isLoading}
             />
@@ -401,6 +421,17 @@ export const AuthorManuscriptDetails: React.FC = () => {
               </p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Tab: Editor Communications Desk */}
+      {activeTab === 'communications' && (
+        <div className="space-y-4">
+          <EditorAuthorChat
+            manuscriptId={manuscript.id}
+            userRole="author"
+            canCommunicate={manuscript.canCommunicate}
+          />
         </div>
       )}
 

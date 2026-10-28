@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../../store';
 import {
   fetchManuscriptById,
   assignManuscriptReviewer,
+  reassignReviewerThunk,
   requestManuscriptRevision,
   forwardRevisionThunk,
   enableStage2Thunk,
@@ -15,10 +16,12 @@ import {
 import { fetchReviewsByManuscript } from '../../features/reviews/reviewThunk';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { AssignReviewerModal } from '../../components/modals/AssignReviewerModal';
+import { ReassignReviewerModal } from '../../components/modals/ReassignReviewerModal';
 import { RejectManuscriptModal } from '../../components/modals/RejectManuscriptModal';
 import { PublishManuscriptModal } from '../../components/modals/PublishManuscriptModal';
 import { ForwardRevisionModal } from '../../components/modals/ForwardRevisionModal';
 import { ConsolidatedFeedbackModal } from '../../components/modals/ConsolidatedFeedbackModal';
+import { EditorAuthorChat } from '../../components/common/EditorAuthorChat';
 import { Modal } from '../../components/common/Modal';
 import { ReviewReport } from '../../types/review.types';
 import { SRMU_CRITERIA } from '../../components/forms/ReviewForm';
@@ -41,6 +44,8 @@ import {
   Star,
   Clock,
   Sparkles,
+  MessageSquare,
+  RefreshCw,
 } from 'lucide-react';
 
 export const EditorManuscriptDetails: React.FC = () => {
@@ -54,15 +59,19 @@ export const EditorManuscriptDetails: React.FC = () => {
   const { reviews } = useAppSelector((state) => state.reviews);
   const manuscript = manuscripts.find((m) => m.id === id);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'reviewReport' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'reviewReport' | 'communications' | 'history'>('overview');
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
   const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
   const [isForwarding, setIsForwarding] = useState(false);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [reassignSlot, setReassignSlot] = useState<1 | 2>(1);
+  const [isReassigning, setIsReassigning] = useState(false);
 
   const [revisionComments, setRevisionComments] = useState('');
+  const [editorComments, setEditorComments] = useState('');
   const defaultPublishForm = {
     doi: `10.5555/ijspast.${new Date().getFullYear()}.${id?.slice(-4) || '0001'}`,
     volume: 'Vol. 14',
@@ -288,12 +297,14 @@ export const EditorManuscriptDetails: React.FC = () => {
         requestManuscriptRevision({
           manuscriptId: manuscript.id,
           comments: revisionComments.trim(),
+          editorComments: editorComments.trim() ? editorComments.trim() : undefined,
           editorName: user?.name || 'Editor-in-Chief',
         })
       ).unwrap();
       toast.success(`Consolidated feedback dispatched to author for ${manuscript.id}!`);
       setIsRevisionModalOpen(false);
       setRevisionComments('');
+      setEditorComments('');
       if (id) {
         await dispatch(fetchManuscriptById(id));
         await dispatch(fetchReviewsByManuscript(id));
@@ -302,6 +313,35 @@ export const EditorManuscriptDetails: React.FC = () => {
       const msg = typeof err === 'string' ? err : err?.message || 'Failed to dispatch consolidated feedback to author.';
       console.error('Failed to dispatch consolidated feedback:', err);
       toast.error(msg);
+    }
+  };
+
+  const handleReassignReviewer = async (
+    slot: number,
+    replacementReviewerId: string,
+    reason?: string
+  ) => {
+    setIsReassigning(true);
+    try {
+      await dispatch(
+        reassignReviewerThunk({
+          manuscriptId: manuscript.id,
+          slot,
+          replacementReviewerId,
+          reason,
+        })
+      ).unwrap();
+      toast.success(`Reviewer ${slot} successfully reassigned for ${manuscript.id}!`);
+      setIsReassignModalOpen(false);
+      if (id) {
+        await dispatch(fetchManuscriptById(id));
+        await dispatch(fetchReviewsByManuscript(id));
+      }
+    } catch (err: any) {
+      const msg = typeof err === 'string' ? err : err?.message || 'Failed to reassign reviewer.';
+      toast.error(msg);
+    } finally {
+      setIsReassigning(false);
     }
   };
 
@@ -643,15 +683,25 @@ export const EditorManuscriptDetails: React.FC = () => {
                   )
                 )}
 
-                {/* Accept */}
+                {/* Accept - Disabled until both reviewers submit feedback (2/2 Ready) */}
                 {['Under Review', 'Review Completed', 'Revision Submitted'].includes(manuscript.status) && (
                   <button
                     type="button"
                     onClick={handleAccept}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                    disabled={!manuscript.canAccept}
+                    title={
+                      !manuscript.canAccept
+                        ? `Accept button is disabled: Both assigned reviewers must submit feedback for the current review round (${manuscript.feedbackProgress || '0/2 Ready'}).`
+                        : 'Accept manuscript formally for publication'
+                    }
+                    className={`px-4 py-2 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 ${
+                      manuscript.canAccept
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer'
+                        : 'bg-slate-100 border border-slate-300 text-slate-400 cursor-not-allowed opacity-75'
+                    }`}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Accept Manuscript</span>
+                    <span>Accept Manuscript ({manuscript.feedbackProgress || '0/2 Ready'})</span>
                   </button>
                 )}
 
@@ -679,8 +729,8 @@ export const EditorManuscriptDetails: React.FC = () => {
                   </button>
                 )}
 
-                {/* Reject */}
-                {manuscript.status !== 'Published' && manuscript.status !== 'Rejected' && (
+                {/* Reject - Hidden during active reviewer evaluation */}
+                {manuscript.status !== 'Published' && manuscript.status !== 'Rejected' && manuscript.canReject && (
                   <button
                     type="button"
                     onClick={() => setIsRejectModalOpen(true)}
@@ -747,6 +797,27 @@ export const EditorManuscriptDetails: React.FC = () => {
             }`}
           >
             {reviews.length}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('communications')}
+          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center gap-2 ${
+            activeTab === 'communications'
+              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+              : 'text-slate-300 hover:text-white hover:bg-white/10'
+          }`}
+        >
+          <MessageSquare className="w-3.5 h-3.5" />
+          <span>Author Communications</span>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+              activeTab === 'communications'
+                ? 'bg-slate-950/20 text-slate-950 font-black'
+                : 'bg-white/10 text-slate-300'
+            }`}
+          >
+            {manuscript.communicationExchanges || 0}/5
           </span>
         </button>
         <button
@@ -853,24 +924,172 @@ export const EditorManuscriptDetails: React.FC = () => {
               {manuscript.assignedReviewerName || manuscript.assignedReviewer2Name ? (
                 <div className="space-y-3">
                   {manuscript.assignedReviewerName && (
-                    <div className="p-3 bg-indigo-50/60 rounded-xl border border-indigo-100 space-y-1">
-                      <span className="text-[10px] uppercase font-bold text-indigo-700 block">Reviewer 1 (Primary)</span>
-                      <p className="font-bold text-slate-900">{manuscript.assignedReviewerName}</p>
-                      <p className="text-slate-500 text-[11px]">Assigned: {manuscript.assignedDate || 'Recent'}</p>
+                    <div className={`p-3.5 rounded-xl border space-y-2 ${
+                      manuscript.reviewer1Status === 'Overdue'
+                        ? 'bg-red-50/70 border-red-200'
+                        : manuscript.reviewer1Status === 'Completed'
+                        ? 'bg-emerald-50/70 border-emerald-200'
+                        : 'bg-indigo-50/60 border-indigo-100'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-indigo-700 block">
+                          Reviewer 1 (Primary)
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            manuscript.reviewer1Status === 'Completed'
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                              : manuscript.reviewer1Status === 'Overdue'
+                              ? 'bg-red-100 text-red-800 border-red-300'
+                              : 'bg-amber-100 text-amber-800 border-amber-300'
+                          }`}>
+                            {manuscript.reviewer1Status || 'Pending'}
+                          </span>
+                          {manuscript.reviewer1RoleEnded && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800">
+                              Role Ended
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="font-bold text-slate-900 text-sm">{manuscript.assignedReviewerName}</p>
+
+                      <div className="text-[11px] space-y-1 text-slate-600">
+                        <div className="flex justify-between">
+                          <span>Assigned:</span>
+                          <strong className="text-slate-800">{manuscript.assignedReviewer1Date || manuscript.assignedDate || 'N/A'}</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>15-Day Deadline:</span>
+                          <strong className="text-slate-800">{manuscript.assignedReviewer1Deadline || manuscript.reviewDeadline || '15 days from assignment'}</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Remaining Time:</span>
+                          {manuscript.reviewer1Status === 'Overdue' ? (
+                            <span className="text-red-700 font-bold">{Math.abs(manuscript.reviewer1DaysRemaining || 0)} days overdue</span>
+                          ) : manuscript.reviewer1Status === 'Completed' ? (
+                            <span className="text-emerald-700 font-bold">Feedback Submitted</span>
+                          ) : (
+                            <span className="text-amber-700 font-semibold">{manuscript.reviewer1DaysRemaining ?? 15} days remaining</span>
+                          )}
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Permitted Feedback:</span>
+                          <strong className="text-slate-800">{manuscript.reviewer1SubmissionCount || 0}/2 Submitted</strong>
+                        </div>
+                      </div>
+
+                      {/* Reassign Action */}
+                      {manuscript.reviewer1Status === 'Overdue' || manuscript.reviewer1CanReassign ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReassignSlot(1);
+                            setIsReassignModalOpen(true);
+                          }}
+                          className="mt-2 w-full py-1.5 px-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Reassign Reviewer 1 (Overdue)</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          title={`Reassignment available only after 15 days without feedback. (${manuscript.reviewer1DaysRemaining ?? 15} days remaining)`}
+                          className="mt-2 w-full py-1.5 px-3 bg-slate-100 border border-slate-200 text-slate-400 font-semibold rounded-lg text-[10px] flex items-center justify-center gap-1 cursor-not-allowed"
+                        >
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>Reassignment Locked (Under 15 Days)</span>
+                        </button>
+                      )}
                     </div>
                   )}
 
                   {manuscript.assignedReviewer2Name && (
-                    <div className="p-3 bg-purple-50/60 rounded-xl border border-purple-100 space-y-1">
-                      <span className="text-[10px] uppercase font-bold text-purple-700 block">Reviewer 2 (Secondary)</span>
-                      <p className="font-bold text-slate-900">{manuscript.assignedReviewer2Name}</p>
-                      <p className="text-slate-500 text-[11px]">Assigned: {manuscript.assignedDate || 'Recent'}</p>
+                    <div className={`p-3.5 rounded-xl border space-y-2 ${
+                      manuscript.reviewer2Status === 'Overdue'
+                        ? 'bg-red-50/70 border-red-200'
+                        : manuscript.reviewer2Status === 'Completed'
+                        ? 'bg-emerald-50/70 border-emerald-200'
+                        : 'bg-purple-50/60 border-purple-100'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-bold text-purple-700 block">
+                          Reviewer 2 (Secondary)
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            manuscript.reviewer2Status === 'Completed'
+                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                              : manuscript.reviewer2Status === 'Overdue'
+                              ? 'bg-red-100 text-red-800 border-red-300'
+                              : 'bg-amber-100 text-amber-800 border-amber-300'
+                          }`}>
+                            {manuscript.reviewer2Status || 'Pending'}
+                          </span>
+                          {manuscript.reviewer2RoleEnded && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-800">
+                              Role Ended
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="font-bold text-slate-900 text-sm">{manuscript.assignedReviewer2Name}</p>
+
+                      <div className="text-[11px] space-y-1 text-slate-600">
+                        <div className="flex justify-between">
+                          <span>Assigned:</span>
+                          <strong className="text-slate-800">{manuscript.assignedReviewer2Date || manuscript.assignedDate || 'N/A'}</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>15-Day Deadline:</span>
+                          <strong className="text-slate-800">{manuscript.assignedReviewer2Deadline || manuscript.reviewDeadline || '15 days from assignment'}</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Remaining Time:</span>
+                          {manuscript.reviewer2Status === 'Overdue' ? (
+                            <span className="text-red-700 font-bold">{Math.abs(manuscript.reviewer2DaysRemaining || 0)} days overdue</span>
+                          ) : manuscript.reviewer2Status === 'Completed' ? (
+                            <span className="text-emerald-700 font-bold">Feedback Submitted</span>
+                          ) : (
+                            <span className="text-amber-700 font-semibold">{manuscript.reviewer2DaysRemaining ?? 15} days remaining</span>
+                          )}
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Permitted Feedback:</span>
+                          <strong className="text-slate-800">{manuscript.reviewer2SubmissionCount || 0}/2 Submitted</strong>
+                        </div>
+                      </div>
+
+                      {/* Reassign Action */}
+                      {manuscript.reviewer2Status === 'Overdue' || manuscript.reviewer2CanReassign ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setReassignSlot(2);
+                            setIsReassignModalOpen(true);
+                          }}
+                          className="mt-2 w-full py-1.5 px-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-colors"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Reassign Reviewer 2 (Overdue)</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled
+                          title={`Reassignment available only after 15 days without feedback. (${manuscript.reviewer2DaysRemaining ?? 15} days remaining)`}
+                          className="mt-2 w-full py-1.5 px-3 bg-slate-100 border border-slate-200 text-slate-400 font-semibold rounded-lg text-[10px] flex items-center justify-center gap-1 cursor-not-allowed"
+                        >
+                          <Clock className="w-3 h-3 text-slate-400" />
+                          <span>Reassignment Locked (Under 15 Days)</span>
+                        </button>
+                      )}
                     </div>
                   )}
-
-                  <p className="text-slate-500 pt-1 text-[11px]">
-                    Evaluation Deadline: <strong className="text-slate-700">{manuscript.reviewDeadline || 'Within 14 days'}</strong>
-                  </p>
                 </div>
               ) : (
                 <div className="p-4 text-center bg-slate-50 rounded-xl border border-slate-200/80 space-y-2">
@@ -1074,6 +1293,17 @@ export const EditorManuscriptDetails: React.FC = () => {
         </div>
       )}
 
+      {/* Tab: Author Communications Desk */}
+      {activeTab === 'communications' && (
+        <div className="space-y-4">
+          <EditorAuthorChat
+            manuscriptId={manuscript.id}
+            userRole="editor"
+            canCommunicate={manuscript.canCommunicate}
+          />
+        </div>
+      )}
+
       {/* Tab 3: History */}
       {activeTab === 'history' && (
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
@@ -1110,6 +1340,44 @@ export const EditorManuscriptDetails: React.FC = () => {
         onAssign={handleAssignReviewer}
       />
 
+      {/* MODAL: Reassign Overdue Reviewer */}
+      <ReassignReviewerModal
+        isOpen={isReassignModalOpen}
+        onClose={() => setIsReassignModalOpen(false)}
+        manuscriptId={manuscript.id}
+        manuscriptTitle={manuscript.title}
+        slot={reassignSlot}
+        currentReviewerName={
+          reassignSlot === 1
+            ? manuscript.assignedReviewerName || 'Reviewer 1'
+            : manuscript.assignedReviewer2Name || 'Reviewer 2'
+        }
+        currentReviewerAssignedDate={
+          reassignSlot === 1
+            ? manuscript.assignedReviewer1Date || manuscript.assignedDate
+            : manuscript.assignedReviewer2Date || manuscript.assignedDate
+        }
+        currentReviewerDeadline={
+          reassignSlot === 1
+            ? manuscript.assignedReviewer1Deadline || manuscript.reviewDeadline
+            : manuscript.assignedReviewer2Deadline || manuscript.reviewDeadline
+        }
+        daysOverdue={
+          reassignSlot === 1
+            ? manuscript.reviewer1DaysRemaining !== undefined && manuscript.reviewer1DaysRemaining < 0
+              ? Math.abs(manuscript.reviewer1DaysRemaining)
+              : 0
+            : manuscript.reviewer2DaysRemaining !== undefined && manuscript.reviewer2DaysRemaining < 0
+              ? Math.abs(manuscript.reviewer2DaysRemaining)
+              : 0
+        }
+        otherReviewerId={
+          reassignSlot === 1 ? manuscript.assignedReviewer2Id : manuscript.assignedReviewerId
+        }
+        onReassign={handleReassignReviewer}
+        isLoading={isReassigning}
+      />
+
       {/* MODAL: Forward Revisions to Reviewers */}
       <ForwardRevisionModal
         isOpen={!isMaxRevisionsReached && isForwardModalOpen}
@@ -1142,6 +1410,8 @@ export const EditorManuscriptDetails: React.FC = () => {
         rev2Final={rev2Final}
         revisionComments={revisionComments}
         onChangeRevisionComments={setRevisionComments}
+        editorComments={editorComments}
+        onChangeEditorComments={setEditorComments}
         onAutoMerge={handleAutoMergeReviews}
         onConfirm={handleConfirmRevision}
       />

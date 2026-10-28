@@ -176,8 +176,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </span>
               </div>
 
-              {/* Only Author and Reviewer can change password. Editor credentials cannot be changed. */}
-              {(user?.role === 'author' || user?.role === 'reviewer') && (
+              {/* Allow all authenticated roles (Author, Reviewer, Editor) to change password */}
+              {user && (
                 <div className="py-1 border-t border-slate-800">
                   <button
                     type="button"

@@ -72,20 +72,25 @@ export const StatCard: React.FC<StatCardProps> = ({
           onClick();
         }
       }}
-      className={`group relative bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs transition-all duration-200 overflow-hidden ${
-        onClick
-          ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-slate-300 select-none'
-          : ''
-      } ${isActive ? scheme.activeRing : ''}`}
+      className={`group relative bg-white border border-slate-200/90 rounded-2xl p-3 shadow-xs transition-all duration-200 overflow-hidden ${onClick
+        ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 hover:border-slate-300 select-none'
+        : ''
+        } ${isActive ? scheme.activeRing : ''}`}
     >
       {/* Top Accent Gradient Stripe */}
       <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${scheme.stripe}`} />
 
       <div className="flex items-start justify-between gap-3 pt-1">
         <div className="space-y-1.5 min-w-0">
-          <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
-            {title}
-          </p>
+          <div className="relative group">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">
+              {title}
+            </p>
+
+            <div className="absolute left-0 top-full z-50 mt-1 text-nowrap hidden max-w-xs whitespace-normal break-words rounded-md bg-slate-600 px-3 py-2 text-xs font-medium normal-case tracking-normal text-white shadow-lg group-hover:block">
+              {title}
+            </div>
+          </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black tracking-tight text-slate-900 font-mono">
               {value}

@@ -4,6 +4,7 @@ import {
   Manuscript,
   ManuscriptSubmissionPayload,
   PublicationDetails,
+  CommunicationThread,
 } from '../../types/manuscript.types';
 
 // Fetch manuscripts for editor
@@ -154,17 +155,85 @@ export const assignManuscriptReviewer = createAsyncThunk(
 export const requestManuscriptRevision = createAsyncThunk(
   'manuscripts/requestRevision',
   async (
-    payload: { manuscriptId: string; comments: string; editorName?: string },
+    payload: {
+      manuscriptId: string;
+      comments: string;
+      editorComments?: string;
+      editorName?: string;
+    },
     { rejectWithValue }
   ) => {
     try {
       const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/decision`, {
         decision: 'REQUEST_REVISION',
         comments: payload.comments,
+        editorComments: payload.editorComments,
       });
       return (res.data || res) as Manuscript;
     } catch (e: any) {
       return rejectWithValue(e.message || 'Revision request failed');
+    }
+  }
+);
+
+export const reassignReviewerThunk = createAsyncThunk(
+  'manuscripts/reassignReviewer',
+  async (
+    payload: {
+      manuscriptId: string;
+      slot: number;
+      replacementReviewerId: string;
+      reason?: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res: any = await axiosInstance.post(`/editor/manuscripts/${payload.manuscriptId}/reassign-reviewer`, {
+        slot: payload.slot,
+        replacementReviewerId: payload.replacementReviewerId,
+        reason: payload.reason,
+      });
+      return (res.data || res) as Manuscript;
+    } catch (e: any) {
+      return rejectWithValue(e.message || 'Reassigning reviewer failed');
+    }
+  }
+);
+
+export const fetchCommunicationsThunk = createAsyncThunk(
+  'manuscripts/fetchCommunications',
+  async (
+    payload: { manuscriptId: string; role?: string },
+    { getState, rejectWithValue }
+  ) => {
+    try {
+      const state = getState() as any;
+      const role = payload.role || state.auth?.user?.role || 'editor';
+      const prefix = role === 'author' ? 'author' : 'editor';
+      const res: any = await axiosInstance.get(`/${prefix}/manuscripts/${payload.manuscriptId}/communications`);
+      return res.data as CommunicationThread;
+    } catch (e: any) {
+      return rejectWithValue(e.message || 'Failed to fetch communications');
+    }
+  }
+);
+
+export const sendCommunicationThunk = createAsyncThunk(
+  'manuscripts/sendCommunication',
+  async (
+    payload: { manuscriptId: string; message: string; role?: string },
+    { getState, rejectWithValue }
+  ) => {
+    try {
+      const state = getState() as any;
+      const role = payload.role || state.auth?.user?.role || 'editor';
+      const prefix = role === 'author' ? 'author' : 'editor';
+      const res: any = await axiosInstance.post(`/${prefix}/manuscripts/${payload.manuscriptId}/communications`, {
+        message: payload.message,
+      });
+      return res.data as CommunicationThread;
+    } catch (e: any) {
+      return rejectWithValue(e.message || 'Failed to send message');
     }
   }
 );

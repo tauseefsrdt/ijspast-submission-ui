@@ -176,26 +176,14 @@ export const LoginPage: React.FC = () => {
               leftIcon={<Lock className="w-4 h-4" />}
             />
 
-            {/* Password Management Rules:
-                Author & Reviewer: Can use Forgot Password to reset via email OTP.
-                Editor: Cannot change or reset password. Do not show Forgot Password option. */}
-            {!isEditorMode ? (
-              <div className="flex justify-end mt-2">
-                <Link
-                  to="/forgot-password"
-                  className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
-            ) : (
-              <div className="mt-2.5 p-2.5 bg-[#071526]/80 border border-slate-700/80 rounded-xl flex items-start gap-2 text-slate-300 text-[11px] leading-tight">
-                <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-                <span>
-                  Editor credentials are centrally managed by system administration. Self-service password reset is disabled for editor accounts.
-                </span>
-              </div>
-            )}
+            <div className="flex justify-end mt-2">
+              <Link
+                to="/forgot-password"
+                className="text-xs font-bold text-amber-400 hover:text-amber-300 hover:underline transition-colors"
+              >
+                Forgot Password?
+              </Link>
+            </div>
           </div>
 
           <button

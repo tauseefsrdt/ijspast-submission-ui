@@ -193,17 +193,38 @@ export const ManuscriptTable: React.FC<ManuscriptTableProps> = ({
                     {showReviewerColumn && (
                       <td className="py-4 px-4 whitespace-nowrap">
                         {hasRev1 || hasRev2 ? (
-                          <div className="space-y-0.5 text-[11px]">
+                          <div className="space-y-1 text-[11px]">
+                            {m.feedbackProgress && (
+                              <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                m.feedbackReadyCount === 2
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                  : m.feedbackReadyCount === 1
+                                  ? 'bg-amber-50 text-amber-800 border-amber-300'
+                                  : 'bg-slate-100 text-slate-700 border-slate-300'
+                              }`}>
+                                {m.feedbackProgress}
+                              </span>
+                            )}
                             {hasRev1 && (
                               <div className="flex items-center gap-1.5 font-medium text-slate-800">
-                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-                                <span className="truncate max-w-[140px]">{m.assignedReviewerName}</span>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.reviewer1Status === 'Overdue' ? 'bg-red-500' : 'bg-blue-500'}`} />
+                                <span className="truncate max-w-[130px]">{m.assignedReviewerName}</span>
+                                {m.reviewer1Status === 'Overdue' && (
+                                  <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-red-100 text-red-800 border border-red-200">
+                                    Overdue
+                                  </span>
+                                )}
                               </div>
                             )}
                             {hasRev2 && (
                               <div className="flex items-center gap-1.5 font-medium text-slate-800">
-                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0" />
-                                <span className="truncate max-w-[140px]">{m.assignedReviewer2Name}</span>
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${m.reviewer2Status === 'Overdue' ? 'bg-red-500' : 'bg-purple-500'}`} />
+                                <span className="truncate max-w-[130px]">{m.assignedReviewer2Name}</span>
+                                {m.reviewer2Status === 'Overdue' && (
+                                  <span className="text-[9px] font-bold px-1 py-0.2 rounded bg-red-100 text-red-800 border border-red-200">
+                                    Overdue
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -222,7 +243,9 @@ export const ManuscriptTable: React.FC<ManuscriptTableProps> = ({
 
                     {/* Status Badge */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <StatusBadge status={m.status} size="sm" />
+                      <div className="space-y-1">
+                        <StatusBadge status={m.status} size="sm" />
+                      </div>
                     </td>
 
                     {/* Actions */}

@@ -21,7 +21,9 @@ import { SRMU_CRITERIA } from '../../components/forms/ReviewForm';
 import { reviewerEnrollmentSchema } from '../../utils/validationSchemas';
 import { FormInput } from '../../components/forms/common/FormInput';
 import { useToast } from '../../context/ToastContext';
+import { ChangePasswordModal } from '../../components/common/ChangePasswordModal';
 import {
+  KeyRound,
   FileText,
   Clock,
   Send,
@@ -67,6 +69,7 @@ export const EditorDashboard: React.FC = () => {
   const [kpiFilter, setKpiFilter] = useState<string | null>(null);
 
   // Reviewer search & filter
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [reviewerSearch, setReviewerSearch] = useState('');
 
   // Create Reviewer Modal state
@@ -304,6 +307,16 @@ export const EditorDashboard: React.FC = () => {
 
           <button
             type="button"
+            onClick={() => setChangePasswordOpen(true)}
+            className="p-2.5 text-slate-200 hover:text-white border border-white/10 hover:bg-white/10 bg-white/5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            title="Change Account Password"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Change Password</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => {
               setCreatedCredentials(null);
               setIsCreateReviewerOpen(true);
@@ -316,8 +329,13 @@ export const EditorDashboard: React.FC = () => {
         </div>
       </div>
 
+      <ChangePasswordModal
+        isOpen={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
+
       {/* Interactive Enterprise KPI Stat Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
         <StatCard
           title="Total Papers"
           value={total}
@@ -404,18 +422,16 @@ export const EditorDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('queue')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-            activeTab === 'queue'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${activeTab === 'queue'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           <FileText className="w-4 h-4" />
           <span>Submissions Queue</span>
           <span
-            className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-              activeTab === 'queue' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
-            }`}
+            className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'queue' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
+              }`}
           >
             {displayedManuscripts.length}
           </span>
@@ -424,11 +440,10 @@ export const EditorDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('authors')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-            activeTab === 'authors'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${activeTab === 'authors'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           <User className="w-4 h-4" />
           <span>Author Directory</span>
@@ -437,11 +452,10 @@ export const EditorDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('reviewersTable')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-            activeTab === 'reviewersTable'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${activeTab === 'reviewersTable'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           <Briefcase className="w-4 h-4" />
           <span>Reviewer Relations Table</span>
@@ -450,18 +464,16 @@ export const EditorDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('reviewers')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-            activeTab === 'reviewers'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${activeTab === 'reviewers'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           <Users className="w-4 h-4" />
           <span>Reviewers Directory</span>
           <span
-            className={`px-1.5 py-0.2 rounded-full text-[10px] ${
-              activeTab === 'reviewers' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
-            }`}
+            className={`px-1.5 py-0.2 rounded-full text-[10px] ${activeTab === 'reviewers' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
+              }`}
           >
             {reviewers.length}
           </span>
@@ -470,11 +482,10 @@ export const EditorDashboard: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('feedback')}
-          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-            activeTab === 'feedback'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer ${activeTab === 'feedback'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           <Layers className="w-4 h-4" />
           <span>Dual-Stage Review Record</span>
@@ -894,11 +905,10 @@ export const EditorDashboard: React.FC = () => {
                               <p className="font-bold text-slate-800">{m.assignedReviewerName}</p>
                               <div className="flex items-center gap-1 text-[10px]">
                                 <span
-                                  className={`px-1.5 py-0.2 rounded font-bold ${
-                                    r1Stage1
-                                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                      : 'bg-amber-50 text-amber-800 border border-amber-200'
-                                  }`}
+                                  className={`px-1.5 py-0.2 rounded font-bold ${r1Stage1
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    : 'bg-amber-50 text-amber-800 border border-amber-200'
+                                    }`}
                                 >
                                   S1: {r1Stage1 ? r1Stage1.recommendation : 'Pending'}
                                 </span>
@@ -921,11 +931,10 @@ export const EditorDashboard: React.FC = () => {
                               <p className="font-bold text-slate-800">{m.assignedReviewer2Name}</p>
                               <div className="flex items-center gap-1 text-[10px]">
                                 <span
-                                  className={`px-1.5 py-0.2 rounded font-bold ${
-                                    r2Stage1
-                                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                                      : 'bg-amber-50 text-amber-800 border border-amber-200'
-                                  }`}
+                                  className={`px-1.5 py-0.2 rounded font-bold ${r2Stage1
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    : 'bg-amber-50 text-amber-800 border border-amber-200'
+                                    }`}
                                 >
                                   S1: {r2Stage1 ? r2Stage1.recommendation : 'Pending'}
                                 </span>
@@ -1217,8 +1226,8 @@ export const EditorDashboard: React.FC = () => {
                   .find((h) => h.status === 'Revision Requested');
                 const hasSent = Boolean(
                   selectedManuscriptForDossier.revisionRequestComments ||
-                    lastReq ||
-                    selectedManuscriptForDossier.status === 'Revision Requested'
+                  lastReq ||
+                  selectedManuscriptForDossier.status === 'Revision Requested'
                 );
 
                 const r1Stage1 = dossierReviews.some(
@@ -1227,7 +1236,7 @@ export const EditorDashboard: React.FC = () => {
                       r.reviewerId === selectedManuscriptForDossier.assignedReviewerId) ||
                     (selectedManuscriptForDossier.assignedReviewerName &&
                       r.reviewerName?.toLowerCase() ===
-                        selectedManuscriptForDossier.assignedReviewerName.toLowerCase())
+                      selectedManuscriptForDossier.assignedReviewerName.toLowerCase())
                 );
                 const r2Stage1 = dossierReviews.some(
                   (r) =>
@@ -1235,7 +1244,7 @@ export const EditorDashboard: React.FC = () => {
                       r.reviewerId === selectedManuscriptForDossier.assignedReviewer2Id) ||
                     (selectedManuscriptForDossier.assignedReviewer2Name &&
                       r.reviewerName?.toLowerCase() ===
-                        selectedManuscriptForDossier.assignedReviewer2Name.toLowerCase())
+                      selectedManuscriptForDossier.assignedReviewer2Name.toLowerCase())
                 );
 
                 const r1NextDone = dossierReviews.some(
@@ -1244,7 +1253,7 @@ export const EditorDashboard: React.FC = () => {
                       r.reviewerId === selectedManuscriptForDossier.assignedReviewerId) ||
                       (selectedManuscriptForDossier.assignedReviewerName &&
                         r.reviewerName?.toLowerCase() ===
-                          selectedManuscriptForDossier.assignedReviewerName.toLowerCase())) &&
+                        selectedManuscriptForDossier.assignedReviewerName.toLowerCase())) &&
                     ((r.stage && r.stage >= 2) || (r as any).round >= 2)
                 );
                 const r2NextDone = dossierReviews.some(
@@ -1253,7 +1262,7 @@ export const EditorDashboard: React.FC = () => {
                       r.reviewerId === selectedManuscriptForDossier.assignedReviewer2Id) ||
                       (selectedManuscriptForDossier.assignedReviewer2Name &&
                         r.reviewerName?.toLowerCase() ===
-                          selectedManuscriptForDossier.assignedReviewer2Name.toLowerCase())) &&
+                        selectedManuscriptForDossier.assignedReviewer2Name.toLowerCase())) &&
                     ((r.stage && r.stage >= 2) || (r as any).round >= 2)
                 );
 
@@ -1331,7 +1340,7 @@ export const EditorDashboard: React.FC = () => {
                         r.reviewerId === selectedManuscriptForDossier.assignedReviewerId) ||
                       (selectedManuscriptForDossier.assignedReviewerName &&
                         r.reviewerName?.toLowerCase() ===
-                          selectedManuscriptForDossier.assignedReviewerName.toLowerCase())
+                        selectedManuscriptForDossier.assignedReviewerName.toLowerCase())
                   );
                   const stage1 = rev1Reports.find((r) => r.stage === 1 || (!r.stage && rev1Reports.length === 1));
                   const stage2 = rev1Reports.find((r) => r.stage === 2);
@@ -1362,11 +1371,11 @@ export const EditorDashboard: React.FC = () => {
                                   {stage1.overallScore
                                     ? stage1.overallScore.toFixed(1)
                                     : stage1.rubricScores && stage1.rubricScores.length > 0
-                                    ? (
+                                      ? (
                                         stage1.rubricScores.reduce((a, b) => a + b, 0) /
                                         stage1.rubricScores.length
                                       ).toFixed(1)
-                                    : '—'}
+                                      : '—'}
                                   /5
                                 </strong>
                               </div>
@@ -1494,7 +1503,7 @@ export const EditorDashboard: React.FC = () => {
                         r.reviewerId === selectedManuscriptForDossier.assignedReviewer2Id) ||
                       (selectedManuscriptForDossier.assignedReviewer2Name &&
                         r.reviewerName?.toLowerCase() ===
-                          selectedManuscriptForDossier.assignedReviewer2Name.toLowerCase())
+                        selectedManuscriptForDossier.assignedReviewer2Name.toLowerCase())
                   );
                   const stage1 = rev2Reports.find((r) => r.stage === 1 || (!r.stage && rev2Reports.length === 1));
                   const stage2 = rev2Reports.find((r) => r.stage === 2);
@@ -1525,11 +1534,11 @@ export const EditorDashboard: React.FC = () => {
                                   {stage1.overallScore
                                     ? stage1.overallScore.toFixed(1)
                                     : stage1.rubricScores && stage1.rubricScores.length > 0
-                                    ? (
+                                      ? (
                                         stage1.rubricScores.reduce((a, b) => a + b, 0) /
                                         stage1.rubricScores.length
                                       ).toFixed(1)
-                                    : '—'}
+                                      : '—'}
                                   /5
                                 </strong>
                               </div>

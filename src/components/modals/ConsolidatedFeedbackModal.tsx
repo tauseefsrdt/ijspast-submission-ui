@@ -32,6 +32,8 @@ interface ConsolidatedFeedbackModalProps {
   } | null;
   revisionComments: string;
   onChangeRevisionComments: (comments: string) => void;
+  editorComments?: string;
+  onChangeEditorComments?: (comments: string) => void;
   onAutoMerge: () => void;
   onConfirm: () => Promise<void>;
   isLoading?: boolean;
@@ -55,6 +57,8 @@ export const ConsolidatedFeedbackModal: React.FC<ConsolidatedFeedbackModalProps>
   rev2Final,
   revisionComments,
   onChangeRevisionComments,
+  editorComments = '',
+  onChangeEditorComments,
   onAutoMerge,
   onConfirm,
   isLoading = false,
@@ -275,6 +279,25 @@ export const ConsolidatedFeedbackModal: React.FC<ConsolidatedFeedbackModalProps>
             disabled={hasDualReviewers && !bothReviewersSubmitted}
             className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans disabled:opacity-60 disabled:cursor-not-allowed"
           />
+        </div>
+
+        {/* Field label: Editor Comments */}
+        <div className="space-y-1">
+          <label htmlFor="editorComments" className="font-bold text-slate-800 block">
+            Editor Comments
+          </label>
+          <textarea
+            id="editorComments"
+            rows={4}
+            value={editorComments}
+            onChange={(e) => onChangeEditorComments && onChangeEditorComments(e.target.value)}
+            placeholder="Write your additional comments, clarification, or guidance for the author..."
+            disabled={hasDualReviewers && !bothReviewersSubmitted}
+            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans disabled:opacity-60 disabled:cursor-not-allowed"
+          />
+          <p className="text-[11px] text-slate-500">
+            Optional editorial guidance or synthesis directed to the author. Double-blind integrity is strictly preserved.
+          </p>
         </div>
 
         <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">

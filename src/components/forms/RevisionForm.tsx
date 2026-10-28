@@ -9,6 +9,7 @@ import { useToast } from '../../context/ToastContext';
 interface RevisionFormProps {
   manuscriptId: string;
   revisionRequestComments?: string;
+  editorComments?: string;
   onSubmit: (response: string, file: { name: string; size: number; type: string }) => Promise<void> | void;
   isLoading?: boolean;
 }
@@ -16,6 +17,7 @@ interface RevisionFormProps {
 export const RevisionForm: React.FC<RevisionFormProps> = ({
   manuscriptId,
   revisionRequestComments,
+  editorComments,
   onSubmit,
   isLoading = false,
 }) => {
@@ -88,6 +90,17 @@ export const RevisionForm: React.FC<RevisionFormProps> = ({
           </span>
           <p className="text-amber-950 whitespace-pre-wrap leading-relaxed">
             {revisionRequestComments}
+          </p>
+        </div>
+      )}
+
+      {editorComments && (
+        <div className="p-4 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1 text-xs">
+          <span className="font-bold text-blue-900 block">
+            Editor Comments &amp; Clarification:
+          </span>
+          <p className="text-blue-950 whitespace-pre-wrap leading-relaxed">
+            {editorComments}
           </p>
         </div>
       )}

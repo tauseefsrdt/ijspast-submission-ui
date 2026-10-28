@@ -84,6 +84,9 @@ export const ReviewerManuscriptDetails: React.FC = () => {
   const isRevisionForwarded = Boolean(manuscript.revisionForwardedToReviewer);
   const isSecondRound = hasRevisions || isRevisionForwarded;
 
+  const mySubmissionCount = myReports.length;
+  const isRoleEnded = mySubmissionCount >= 2;
+
   const handleReviewSubmit = async (reportData: {
     manuscriptId: string;
     reviewerId: string;
@@ -100,6 +103,10 @@ export const ReviewerManuscriptDetails: React.FC = () => {
     rubricScores?: number[];
     overallScore?: number;
   }) => {
+    if (isRoleEnded) {
+      toast.error('You have already completed the permitted 2 feedback submissions for this manuscript. Feedback submission is permanently closed.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       await dispatch(
@@ -150,9 +157,12 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                 {manuscript.id}
               </span>
               <StatusBadge status={manuscript.status} size="md" />
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                <Shield className="w-3.5 h-3.5" />
-                <span>Peer Review Workspace</span>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                isRoleEnded
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                  : 'bg-indigo-50 text-indigo-700 border-indigo-200'
+              }`}>
+                {isRoleEnded ? 'Reviewer Role Ended (2/2)' : `Feedback Submissions (${mySubmissionCount}/2)`}
               </span>
             </div>
 
@@ -194,6 +204,24 @@ export const ReviewerManuscriptDetails: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Role Ended Banner */}
+        {isRoleEnded && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-950">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div>
+                <div className="font-bold text-xs sm:text-sm">Review Completed • Reviewer Role Ended (2/2)</div>
+                <div className="text-[11px] text-emerald-800 leading-relaxed">
+                  You have completed both permitted review submissions for this manuscript. Your evaluations have been officially recorded with the Editorial Board, and your reviewer role on this paper is permanently completed.
+                </div>
+              </div>
+            </div>
+            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shrink-0">
+              Reviewer Role Ended
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Two-Stage Review Progress Tracker */}
@@ -287,7 +315,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                   Submitted: {stage1Report.submittedAt?.split('T')[0] || 'Logged'}
                 </span>
               </div>
-            ) : (
+            ) : !isRoleEnded ? (
               <div className="mt-3 pt-2.5 border-t border-slate-100 flex justify-end">
                 <button
                   type="button"
@@ -297,7 +325,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                   Start Stage 1 Form
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Step 2 Card */}
@@ -350,7 +378,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                   Submitted: {stage2Report.submittedAt?.split('T')[0] || 'Logged'}
                 </span>
               </div>
-            ) : stage1Report && manuscript.stage2EnabledByEditor ? (
+            ) : stage1Report && manuscript.stage2EnabledByEditor && !isRoleEnded ? (
               <div className="mt-3 pt-2.5 border-t border-slate-100 flex justify-end">
                 <button
                   type="button"
@@ -518,7 +546,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                 isLoading={isSubmitting}
               />
             </div>
-          ) : (
+          ) : !isRoleEnded ? (
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white/80 p-4 rounded-xl border border-amber-200">
               <span className="text-xs text-amber-900 font-medium">
                 Please re-evaluate the updated manuscript and author rebuttal to formulate your second-round feedback.
@@ -532,12 +560,12 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                 <span>Submit Second-Round Feedback</span>
               </button>
             </div>
-          )}
+          ) : null}
         </div>
       )}
 
       {/* Render Active Review Form for Stage 1 or Stage 2 if chosen */}
-      {activeStageForm && activeStageForm !== 3 ? (
+      {activeStageForm && !isRoleEnded && activeStageForm !== 3 ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold text-slate-900">

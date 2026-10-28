@@ -63,11 +63,35 @@ export interface Manuscript {
   similarityScore?: number;
   assignedReviewerId?: string;
   assignedReviewerName?: string;
+  assignedReviewer1Date?: string;
+  assignedReviewer1Deadline?: string;
+  reviewer1Status?: 'Pending' | 'Overdue' | 'Completed' | string;
+  reviewer1DaysRemaining?: number;
+  reviewer1CanReassign?: boolean;
+  reviewer1SubmissionCount?: number;
+  reviewer1RoleEnded?: boolean;
+
   assignedReviewer2Id?: string;
   assignedReviewer2Name?: string;
+  assignedReviewer2Date?: string;
+  assignedReviewer2Deadline?: string;
+  reviewer2Status?: 'Pending' | 'Overdue' | 'Completed' | string;
+  reviewer2DaysRemaining?: number;
+  reviewer2CanReassign?: boolean;
+  reviewer2SubmissionCount?: number;
+  reviewer2RoleEnded?: boolean;
+
   assignedDate?: string;
   reviewDeadline?: string;
   revisionRequestComments?: string;
+  editorComments?: string;
+  feedbackProgress?: string;
+  feedbackReadyCount?: number;
+  canAccept?: boolean;
+  canReject?: boolean;
+  canCommunicate?: boolean;
+  communicationExchanges?: number;
+
   authorRevisionResponse?: string;
   revisionForwardedToReviewer?: boolean;
   stage2EnabledByEditor?: boolean;
@@ -76,6 +100,24 @@ export interface Manuscript {
   rejectionReason?: string;
   publicationDetails?: PublicationDetails;
   history: StatusHistoryItem[];
+}
+
+export interface CommunicationMessage {
+  id: string;
+  senderId?: string;
+  senderName: string;
+  senderRole: 'Editor' | 'Author' | string;
+  message: string;
+  sentAt: string;
+}
+
+export interface CommunicationThread {
+  manuscriptId: string;
+  totalExchanges: number;
+  maxExchanges: number;
+  limitReached: boolean;
+  canSend: boolean;
+  messages: CommunicationMessage[];
 }
 
 export interface ManuscriptSubmissionPayload {

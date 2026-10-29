@@ -83,6 +83,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
   const isRevisionSubmitted = manuscript.status === 'Revision Submitted';
   const isRevisionForwarded = Boolean(manuscript.revisionForwardedToReviewer);
   const isSecondRound = hasRevisions || isRevisionForwarded;
+  const isStage2Unlocked = Boolean(manuscript.stage2EnabledByEditor || isRevisionForwarded);
 
   const mySubmissionCount = myReports.length;
   const isRoleEnded = mySubmissionCount >= 2;
@@ -250,7 +251,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                     : 'bg-slate-100 text-slate-700 border-slate-300'
                   : stage1Report && stage2Report
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                  : stage1Report && manuscript.stage2EnabledByEditor
+                  : stage1Report && isStage2Unlocked
                   ? 'bg-amber-50 text-amber-800 border-amber-200'
                   : stage1Report
                   ? 'bg-yellow-50 text-yellow-800 border-yellow-200'
@@ -265,10 +266,10 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                   : 'Second-Round Feedback Disabled (Awaiting Editor Action)'
                 : stage1Report && stage2Report
                 ? 'Both Stages Completed (2/2)'
-                : stage1Report && manuscript.stage2EnabledByEditor
+                : stage1Report && isStage2Unlocked
                 ? 'Stage 1 Completed • Stage 2 Unlocked (Action Required)'
                 : stage1Report
-                ? 'Stage 1 Completed • Stage 2 Pending Editor Approval'
+                ? 'Stage 1 Completed • Stage 2 Awaiting Revision Forwarding'
                 : 'Awaiting Stage 1 Submission (0/2)'}
             </span>
           </div>
@@ -348,7 +349,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Completed</span>
                 </span>
-              ) : stage1Report && manuscript.stage2EnabledByEditor ? (
+              ) : stage1Report && isStage2Unlocked ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                   <span>Ready to Submit</span>
@@ -356,7 +357,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
               ) : stage1Report ? (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
                   <Clock className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Awaiting Editor Approval</span>
+                  <span>Awaiting Revision Forwarding</span>
                 </span>
               ) : (
                 <span className="text-[11px] font-medium text-slate-400">
@@ -378,7 +379,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                   Submitted: {stage2Report.submittedAt?.split('T')[0] || 'Logged'}
                 </span>
               </div>
-            ) : stage1Report && manuscript.stage2EnabledByEditor && !isRoleEnded ? (
+            ) : stage1Report && isStage2Unlocked && !isRoleEnded ? (
               <div className="mt-3 pt-2.5 border-t border-slate-100 flex justify-end">
                 <button
                   type="button"
@@ -392,7 +393,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
               <div className="mt-3 pt-2.5 border-t border-slate-100">
                 <p className="text-[11px] text-amber-700 font-medium flex items-center gap-1.5">
                   <Lock className="w-3 h-3 text-amber-600" />
-                  Stage 2 is locked pending editor review and approval.
+                  Stage 2 will be activated automatically when the revised paper is forwarded by the Editor.
                 </p>
               </div>
             ) : null}
@@ -714,7 +715,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
 
       {/* If Stage 1 is Submitted but Stage 2 is not and form not open */}
       {stage1Report && !stage2Report && !activeStageForm && !isSecondRound && (
-        manuscript.stage2EnabledByEditor ? (
+        isStage2Unlocked ? (
           <div className="p-8 text-center bg-white border border-indigo-200 rounded-2xl space-y-4 shadow-xs">
             <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 mx-auto">
               <Sparkles className="w-6 h-6" />
@@ -724,7 +725,7 @@ export const ReviewerManuscriptDetails: React.FC = () => {
                 Stage 1 Complete: Ready for Stage 2 Final Evaluation
               </h3>
               <p className="text-xs text-slate-500">
-                The Editor has approved Stage 2. Please submit your comprehensive Stage 2 evaluation scorecard to finalize your review.
+                Stage 2 has been automatically enabled. Please submit your comprehensive Stage 2 evaluation scorecard to finalize your review.
               </p>
             </div>
             <button
@@ -743,10 +744,10 @@ export const ReviewerManuscriptDetails: React.FC = () => {
             </div>
             <div className="space-y-1 max-w-md mx-auto">
               <h3 className="text-base font-bold text-amber-900">
-                Stage 2 Locked — Awaiting Editor Approval
+                Stage 2 Pending Revision Forwarding
               </h3>
               <p className="text-xs text-amber-700">
-                Your Stage 1 Initial Assessment has been submitted successfully. Stage 2 will be unlocked once the Editor-in-Chief reviews Stage 1 and clicks <strong>"Enable Stage 2 Review"</strong>.
+                Your Stage 1 Initial Assessment has been submitted successfully. When the author submits the revised paper and the Editor-in-Chief forwards it, Stage 2 Review Feedback forms will be enabled automatically.
               </p>
             </div>
           </div>

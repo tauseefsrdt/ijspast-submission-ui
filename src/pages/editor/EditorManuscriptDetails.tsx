@@ -7,7 +7,6 @@ import {
   reassignReviewerThunk,
   requestManuscriptRevision,
   forwardRevisionThunk,
-  enableStage2Thunk,
   acceptManuscriptThunk,
   rejectManuscriptThunk,
   publishManuscriptThunk,
@@ -202,24 +201,12 @@ export const EditorManuscriptDetails: React.FC = () => {
     )
   );
 
-  // Stage 2 actually active only if enabled and (if author resubmitted, editor has forwarded or reassigned)
+  // Stage 2 is activated automatically when Editor forwards revisions to reviewers (or marked enabled)
   const isStage2ActuallyActive = Boolean(
-    manuscript.stage2EnabledByEditor &&
-    (!hasAuthorResubmitted || isForwardedOrReassigned)
+    manuscript.stage2EnabledByEditor ||
+    isForwardedOrReassigned ||
+    manuscript.revisionForwardedToReviewer
   );
-
-  // Enable Stage 2 Review requires:
-  // 1. Both reviewers submitted their Stage 1 feedback
-  // 2. Editor clicked Review & Merge Consolidated Feedback, merged, and sent to author
-  // 3. Author resubmitted the revised paper
-  // 4. Editor performed either Forward Revisions to Reviewers or Reassign Reviewer
-  // 5. Stage 2 has not already been enabled
-  const canEnableStage2 =
-    bothStage1Submitted &&
-    hasSentConsolidatedFeedback &&
-    hasAuthorResubmitted &&
-    isForwardedOrReassigned &&
-    !isStage2ActuallyActive;
 
   // Consolidated Feedback Button requires:
   // - In Initial Cycle (!hasSentConsolidatedFeedback): Both reviewers have submitted Stage 1
@@ -576,64 +563,12 @@ export const EditorManuscriptDetails: React.FC = () => {
                   </button>
                 )}
 
-                {/* Enable Stage 2 Review / Stage 2 Enabled indicator */}
-                {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Requested', 'Revision Submitted'].includes(manuscript.status) && (
-                  isStage2ActuallyActive ? (
-                    <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                      Stage 2 Enabled
-                    </span>
-                  ) : bothStage1Submitted ? (
-                    canEnableStage2 ? (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          try {
-                            await dispatch(enableStage2Thunk(manuscript.id)).unwrap();
-                            toast.success('Stage 2 Review cycle successfully enabled for reviewers!');
-                            if (id) await dispatch(fetchManuscriptById(id));
-                          } catch (err: any) {
-                            toast.error(typeof err === 'string' ? err : err?.message || 'Failed to enable Stage 2 review.');
-                          }
-                        }}
-                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                        title="Enable Stage 2 Final Evaluation for assigned reviewers"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Enable Stage 2 Review</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled
-                        className="px-4 py-2 bg-slate-100 border border-slate-300 text-slate-400 font-bold text-xs rounded-xl shadow-none flex items-center gap-1.5 cursor-not-allowed opacity-75"
-                        title={
-                          !hasSentConsolidatedFeedback
-                            ? "Stage 2 Review disabled: Editor must first review & merge consolidated feedback and dispatch to author."
-                            : !hasAuthorResubmitted
-                            ? "Stage 2 Review disabled: Waiting for author to resubmit the revised manuscript."
-                            : !isForwardedOrReassigned
-                            ? "Stage 2 Review disabled: Editor must first perform either 'Forward Revisions to Reviewers' or 'Reassign Reviewer'."
-                            : "Stage 2 Review disabled: Workflow prerequisites not met."
-                        }
-                      >
-                        <Sparkles className="w-3.5 h-3.5 text-slate-400" />
-                        <span>
-                          {hasAuthorResubmitted && !isForwardedOrReassigned
-                            ? 'Stage 2 (Awaiting Forward / Reassign)'
-                            : 'Enable Stage 2 Review'}
-                        </span>
-                      </button>
-                    )
-                  ) : (isRev1Stage1Submitted || isRev2Stage1Submitted) ? (
-                    <span
-                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1.5"
-                      title="Stage 2 cannot be enabled until all assigned reviewers submit their Stage 1 feedback."
-                    >
-                      <Clock className="w-3.5 h-3.5 text-amber-600" />
-                      Awaiting Donor Reviewer {isRev1Stage1Submitted ? '2' : '1'} Feedback for Stage 2
-                    </span>
-                  ) : null
+                {/* Stage 2 Active indicator (Activated automatically when Editor forwards revised paper) */}
+                {isStage2ActuallyActive && (
+                  <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Stage 2 Review Active</span>
+                  </span>
                 )}
 
                 {/* Request Revision / Consolidated Review */}
@@ -663,8 +598,8 @@ export const EditorManuscriptDetails: React.FC = () => {
                         hasSentConsolidatedFeedback
                           ? !hasAuthorResubmitted
                             ? "Consolidated feedback sent to author. Waiting for author to resubmit revised paper before next review cycle."
-                            : !manuscript.stage2EnabledByEditor
-                            ? "Consolidated feedback sent & author resubmission received. Enable Stage 2 Review to allow reviewers to submit next-cycle feedback."
+                            : !isStage2ActuallyActive
+                            ? "Consolidated feedback sent & author resubmission received. Forward revisions to reviewers to automatically activate Stage 2 review feedback forms."
                             : `Consolidated feedback sent. Waiting for new reviewer evaluations for next review cycle (${isRev1NewSubmitted || isRev2NewSubmitted ? '1/2' : '0/2'} submitted).`
                           : "Dual review policy: Both reviewers must submit feedback before consolidated review can be sent to author."
                       }

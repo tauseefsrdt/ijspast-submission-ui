@@ -109,6 +109,9 @@ export interface CommunicationMessage {
   senderRole: 'Editor' | 'Author' | string;
   message: string;
   sentAt: string;
+  attachmentName?: string;
+  attachmentUrl?: string;
+  attachmentSize?: number;
 }
 
 export interface CommunicationThread {

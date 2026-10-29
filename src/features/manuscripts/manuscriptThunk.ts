@@ -221,7 +221,14 @@ export const fetchCommunicationsThunk = createAsyncThunk(
 export const sendCommunicationThunk = createAsyncThunk(
   'manuscripts/sendCommunication',
   async (
-    payload: { manuscriptId: string; message: string; role?: string },
+    payload: {
+      manuscriptId: string;
+      message: string;
+      role?: string;
+      attachmentName?: string;
+      attachmentUrl?: string;
+      attachmentSize?: number;
+    },
     { getState, rejectWithValue }
   ) => {
     try {
@@ -230,6 +237,9 @@ export const sendCommunicationThunk = createAsyncThunk(
       const prefix = role === 'author' ? 'author' : 'editor';
       const res: any = await axiosInstance.post(`/${prefix}/manuscripts/${payload.manuscriptId}/communications`, {
         message: payload.message,
+        attachmentName: payload.attachmentName,
+        attachmentUrl: payload.attachmentUrl,
+        attachmentSize: payload.attachmentSize,
       });
       return res.data as CommunicationThread;
     } catch (e: any) {

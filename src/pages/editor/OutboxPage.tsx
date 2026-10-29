@@ -177,7 +177,7 @@ export const OutboxPage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-500 w-16 shrink-0">From:</span>
                       <span className="font-medium text-slate-800">
-                        IJSPAST Editorial Office &lt;editorial@ijspast.org&gt;
+                        IJSPAST Editorial Office{import.meta.env.VITE_EDITORIAL_EMAIL ? ` <${import.meta.env.VITE_EDITORIAL_EMAIL}>` : ''}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

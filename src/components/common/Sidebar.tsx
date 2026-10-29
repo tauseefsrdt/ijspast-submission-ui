@@ -286,7 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   {user?.name || 'Administrator'}
                 </p>
                 <p className="text-[10px] text-slate-400 font-mono truncate leading-none mt-0.5">
-                  {user?.email || 'editor@ijspast.org'}
+                  {user?.email || ''}
                 </p>
               </div>
             )}

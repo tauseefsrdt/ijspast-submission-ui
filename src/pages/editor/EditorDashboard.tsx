@@ -176,7 +176,7 @@ export const EditorDashboard: React.FC = () => {
     return manuscripts;
   }, [manuscripts, kpiFilter]);
 
-  const activePaper = manuscripts[0];
+  const activePaper = manuscripts.find((m) => m.status !== 'Published' && m.status !== 'Rejected');
 
   const total = manuscripts.length;
   const awaitingAssignment = manuscripts.filter(

@@ -30,6 +30,14 @@ export interface UploadedFile {
   version?: number;
 }
 
+export interface ManuscriptRevision {
+  id: string;
+  roundNumber: number;
+  file?: UploadedFile;
+  authorRebuttalResponse: string;
+  submittedAt: string;
+}
+
 export interface StatusHistoryItem {
   id: string;
   status: ManuscriptStatus;
@@ -57,6 +65,7 @@ export interface Manuscript {
   coauthors?: string;
   file: UploadedFile;
   revisedFiles?: UploadedFile[];
+  revisions?: ManuscriptRevision[];
   revisionCount?: number;
   status: ManuscriptStatus;
   submissionDate: string;

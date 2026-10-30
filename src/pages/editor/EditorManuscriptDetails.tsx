@@ -45,6 +45,7 @@ import {
   Sparkles,
   MessageSquare,
   RefreshCw,
+  FileText,
 } from 'lucide-react';
 
 export const EditorManuscriptDetails: React.FC = () => {
@@ -143,9 +144,9 @@ export const EditorManuscriptDetails: React.FC = () => {
     typeof manuscript.revisionCount === 'number' && manuscript.revisionCount > 0
       ? manuscript.revisionCount
       : Math.max(
-          manuscript.revisedFiles?.length || 0,
-          (manuscript.history || []).filter((h) => h.status === 'Revision Submitted').length
-        );
+        manuscript.revisedFiles?.length || 0,
+        (manuscript.history || []).filter((h) => h.status === 'Revision Submitted').length
+      );
   const isMaxRevisionsReached = actualRevisionCount >= 2;
 
   // Stage 1 initial evaluation reports
@@ -445,11 +446,10 @@ export const EditorManuscriptDetails: React.FC = () => {
               )}
               {manuscript.similarityScore !== undefined && (
                 <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                    manuscript.similarityScore <= 10
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      : 'bg-rose-50 text-rose-700 border-rose-200'
-                  }`}
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${manuscript.similarityScore <= 10
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                    }`}
                 >
                   {manuscript.similarityScore}% Similarity Check (Benchmark: 10%)
                 </span>
@@ -564,12 +564,12 @@ export const EditorManuscriptDetails: React.FC = () => {
                 )}
 
                 {/* Stage 2 Active indicator (Activated automatically when Editor forwards revised paper) */}
-                {isStage2ActuallyActive && (
+                {/* {isStage2ActuallyActive && (
                   <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Stage 2 Review Active</span>
                   </span>
-                )}
+                )} */}
 
                 {/* Request Revision / Consolidated Review */}
                 {['Under Review', 'Review Completed', 'Editor Assessment', 'Revision Requested', 'Revision Submitted'].includes(manuscript.status) && (
@@ -599,8 +599,8 @@ export const EditorManuscriptDetails: React.FC = () => {
                           ? !hasAuthorResubmitted
                             ? "Consolidated feedback sent to author. Waiting for author to resubmit revised paper before next review cycle."
                             : !isStage2ActuallyActive
-                            ? "Consolidated feedback sent & author resubmission received. Forward revisions to reviewers to automatically activate Stage 2 review feedback forms."
-                            : `Consolidated feedback sent. Waiting for new reviewer evaluations for next review cycle (${isRev1NewSubmitted || isRev2NewSubmitted ? '1/2' : '0/2'} submitted).`
+                              ? "Consolidated feedback sent & author resubmission received. Forward revisions to reviewers to automatically activate Stage 2 review feedback forms."
+                              : `Consolidated feedback sent. Waiting for new reviewer evaluations for next review cycle (${isRev1NewSubmitted || isRev2NewSubmitted ? '1/2' : '0/2'} submitted).`
                           : "Dual review policy: Both reviewers must submit feedback before consolidated review can be sent to author."
                       }
                     >
@@ -610,8 +610,8 @@ export const EditorManuscriptDetails: React.FC = () => {
                           ? !hasAuthorResubmitted
                             ? 'Consolidated Feedback Sent (Awaiting Author Resubmission)'
                             : (isRev1NewSubmitted || isRev2NewSubmitted)
-                            ? `Awaiting Reviewer ${isRev1NewSubmitted ? '2' : '1'} Next-Cycle Feedback (1/2)`
-                            : 'Consolidated Feedback Sent (Awaiting Next-Cycle Feedback)'
+                              ? `Awaiting Reviewer ${isRev1NewSubmitted ? '2' : '1'} Next-Cycle Feedback (1/2)`
+                              : 'Consolidated Feedback Sent (Awaiting Next-Cycle Feedback)'
                           : `Awaiting Reviewer ${isRev1Stage1Submitted ? '2' : '1'} (${isRev1Stage1Submitted || isRev2Stage1Submitted ? '1/2' : '0/2'} Submitted)`}
                       </span>
                     </button>
@@ -629,11 +629,10 @@ export const EditorManuscriptDetails: React.FC = () => {
                         ? `Accept button is disabled: Both assigned reviewers must submit feedback for the current review round (${manuscript.feedbackProgress || '0/2 Ready'}).`
                         : 'Accept manuscript formally for publication'
                     }
-                    className={`px-4 py-2 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 ${
-                      manuscript.canAccept
-                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer'
-                        : 'bg-slate-100 border border-slate-300 text-slate-400 cursor-not-allowed opacity-75'
-                    }`}
+                    className={`px-4 py-2 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 ${manuscript.canAccept
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer'
+                      : 'bg-slate-100 border border-slate-300 text-slate-400 cursor-not-allowed opacity-75'
+                      }`}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     <span>Accept Manuscript ({manuscript.feedbackProgress || '0/2 Ready'})</span>
@@ -641,7 +640,7 @@ export const EditorManuscriptDetails: React.FC = () => {
                 )}
 
                 {/* Publish */}
-                {manuscript.status === 'Accepted' && (
+                {/* {manuscript.status === 'Accepted' && (
                   <button
                     type="button"
                     onClick={() => setIsPublishModalOpen(true)}
@@ -650,7 +649,7 @@ export const EditorManuscriptDetails: React.FC = () => {
                     <BookOpen className="w-3.5 h-3.5" />
                     <span>Publish Manuscript Online</span>
                   </button>
-                )}
+                )} */}
 
                 {/* View Live on Public Site */}
                 {manuscript.status === 'Published' && (
@@ -708,28 +707,25 @@ export const EditorManuscriptDetails: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('overview')}
-          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all ${
-            activeTab === 'overview'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all ${activeTab === 'overview'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           Manuscript Scope &amp; Files
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('reviewReport')}
-          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center gap-2 ${
-            activeTab === 'reviewReport'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center gap-2 ${activeTab === 'reviewReport'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           <span>Reviewer Evaluation Reports</span>
           <span
-            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-              activeTab === 'reviewReport' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
-            }`}
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${activeTab === 'reviewReport' ? 'bg-slate-950/20 text-slate-950 font-black' : 'bg-white/10 text-slate-300'
+              }`}
           >
             {reviews.length}
           </span>
@@ -737,20 +733,18 @@ export const EditorManuscriptDetails: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('communications')}
-          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center gap-2 ${
-            activeTab === 'communications'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all flex items-center gap-2 ${activeTab === 'communications'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           <MessageSquare className="w-3.5 h-3.5" />
           <span>Author Communications</span>
           <span
-            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-              activeTab === 'communications'
-                ? 'bg-slate-950/20 text-slate-950 font-black'
-                : 'bg-white/10 text-slate-300'
-            }`}
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${activeTab === 'communications'
+              ? 'bg-slate-950/20 text-slate-950 font-black'
+              : 'bg-white/10 text-slate-300'
+              }`}
           >
             {manuscript.communicationExchanges || 0}/5
           </span>
@@ -758,11 +752,10 @@ export const EditorManuscriptDetails: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('history')}
-          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all ${
-            activeTab === 'history'
-              ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
-              : 'text-slate-300 hover:text-white hover:bg-white/10'
-          }`}
+          className={`py-2 px-4 rounded-xl font-bold text-xs cursor-pointer transition-all ${activeTab === 'history'
+            ? 'bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-slate-950 font-black shadow-md'
+            : 'text-slate-300 hover:text-white hover:bg-white/10'
+            }`}
         >
           Workflow Audit History
         </button>
@@ -799,7 +792,7 @@ export const EditorManuscriptDetails: React.FC = () => {
             {manuscript.authorRevisionResponse && (
               <div className="pt-4 border-t border-slate-100 space-y-1 text-xs">
                 <span className="font-bold text-indigo-900 block">
-                  Author's Point-by-Point Revision Response:
+                  Author's Point-by-Point Revision Response{manuscript.revisedFiles && manuscript.revisedFiles.length > 0 ? ` (v${manuscript.revisedFiles[manuscript.revisedFiles.length - 1].version || manuscript.revisedFiles.length + 1})` : ''}:
                 </span>
                 <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-slate-800 whitespace-pre-wrap leading-relaxed">
                   {manuscript.authorRevisionResponse}
@@ -814,36 +807,64 @@ export const EditorManuscriptDetails: React.FC = () => {
               <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider">
                 Uploaded Manuscript Documents
               </h3>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-                <p className="font-mono font-bold text-slate-900 truncate">
-                  {manuscript.file.name}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => downloadManuscriptFile(manuscript.file.url || manuscript.file.name, manuscript.file.name)}
-                  className="w-full py-1.5 bg-[#0d3b6e] text-white rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Document</span>
-                </button>
-              </div>
+              {/* Whenever author submits a revised manuscript, ONLY the new revision template appears in the Editor Dashboard */}
+              {manuscript.revisedFiles && manuscript.revisedFiles.length > 0 ? (
+                (() => {
+                  const latestRevisionFile = manuscript.revisedFiles[manuscript.revisedFiles.length - 1];
+                  const revVersion = latestRevisionFile.version || manuscript.revisedFiles.length + 1;
+                  return (
+                    <div className="space-y-3">
+                      <div className="p-3.5 bg-gradient-to-br from-amber-50 to-amber-100/40 border-2 border-amber-300 rounded-xl space-y-2.5 shadow-2xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-amber-950 block text-xs flex items-center gap-1.5">
+                            <FileCheck className="w-4 h-4 text-amber-700" />
+                            <span>New Revision Template (v{revVersion})</span>
+                          </span>
+                          <span className="text-[10px] text-amber-800 font-mono">
+                            {latestRevisionFile.uploadedAt ? latestRevisionFile.uploadedAt.split('T')[0] : ''}
+                          </span>
+                        </div>
+                        <p className="font-mono font-bold text-slate-800 text-[11px] truncate">
+                          {latestRevisionFile.name}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => downloadManuscriptFile(latestRevisionFile.url || latestRevisionFile.name, latestRevisionFile.name)}
+                          className="w-full py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs transition-colors"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>Download Revision</span>
+                        </button>
+                      </div>
 
-              {(manuscript.revisedFiles || []).map((rf, idx) => (
-                <div key={idx} className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl space-y-2">
-                  <span className="font-bold text-amber-900 block text-[11px]">
-                    Revised Document v{rf.version || idx + 1}
-                  </span>
-                  <p className="font-mono text-slate-800 text-[11px] truncate">{rf.name}</p>
+                      <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 flex items-center justify-between">
+                        <span>Prior submissions archived in history.</span>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('history')}
+                          className="font-bold text-indigo-700 hover:underline cursor-pointer"
+                        >
+                          View History &rarr;
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <p className="font-mono font-bold text-slate-900 truncate">
+                    {manuscript.file.name}
+                  </p>
                   <button
                     type="button"
-                    onClick={() => downloadManuscriptFile(rf.url || rf.name, rf.name)}
-                    className="w-full py-1.5 bg-amber-400 hover:bg-amber-500 text-slate-950 rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+                    onClick={() => downloadManuscriptFile(manuscript.file.url || manuscript.file.name, manuscript.file.name)}
+                    className="w-full py-1.5 bg-[#0d3b6e] text-white rounded-lg font-bold flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download Revision</span>
+                    <span>Download Document</span>
                   </button>
                 </div>
-              ))}
+              )}
             </div>
 
             <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-3 text-xs">
@@ -859,25 +880,23 @@ export const EditorManuscriptDetails: React.FC = () => {
               {manuscript.assignedReviewerName || manuscript.assignedReviewer2Name ? (
                 <div className="space-y-3">
                   {manuscript.assignedReviewerName && (
-                    <div className={`p-3.5 rounded-xl border space-y-2 ${
-                      manuscript.reviewer1Status === 'Overdue'
-                        ? 'bg-red-50/70 border-red-200'
-                        : manuscript.reviewer1Status === 'Completed'
+                    <div className={`p-3.5 rounded-xl border space-y-2 ${manuscript.reviewer1Status === 'Overdue'
+                      ? 'bg-red-50/70 border-red-200'
+                      : manuscript.reviewer1Status === 'Completed'
                         ? 'bg-emerald-50/70 border-emerald-200'
                         : 'bg-indigo-50/60 border-indigo-100'
-                    }`}>
+                      }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold text-indigo-700 block">
                           Reviewer 1 (Primary)
                         </span>
                         <div className="flex items-center gap-1.5">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            manuscript.reviewer1Status === 'Completed'
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                              : manuscript.reviewer1Status === 'Overdue'
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${manuscript.reviewer1Status === 'Completed'
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : manuscript.reviewer1Status === 'Overdue'
                               ? 'bg-red-100 text-red-800 border-red-300'
                               : 'bg-amber-100 text-amber-800 border-amber-300'
-                          }`}>
+                            }`}>
                             {manuscript.reviewer1Status || 'Pending'}
                           </span>
                           {manuscript.reviewer1RoleEnded && (
@@ -943,25 +962,23 @@ export const EditorManuscriptDetails: React.FC = () => {
                   )}
 
                   {manuscript.assignedReviewer2Name && (
-                    <div className={`p-3.5 rounded-xl border space-y-2 ${
-                      manuscript.reviewer2Status === 'Overdue'
-                        ? 'bg-red-50/70 border-red-200'
-                        : manuscript.reviewer2Status === 'Completed'
+                    <div className={`p-3.5 rounded-xl border space-y-2 ${manuscript.reviewer2Status === 'Overdue'
+                      ? 'bg-red-50/70 border-red-200'
+                      : manuscript.reviewer2Status === 'Completed'
                         ? 'bg-emerald-50/70 border-emerald-200'
                         : 'bg-purple-50/60 border-purple-100'
-                    }`}>
+                      }`}>
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] uppercase font-bold text-purple-700 block">
                           Reviewer 2 (Secondary)
                         </span>
                         <div className="flex items-center gap-1.5">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                            manuscript.reviewer2Status === 'Completed'
-                              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                              : manuscript.reviewer2Status === 'Overdue'
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${manuscript.reviewer2Status === 'Completed'
+                            ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            : manuscript.reviewer2Status === 'Overdue'
                               ? 'bg-red-100 text-red-800 border-red-300'
                               : 'bg-amber-100 text-amber-800 border-amber-300'
-                          }`}>
+                            }`}>
                             {manuscript.reviewer2Status || 'Pending'}
                           </span>
                           {manuscript.reviewer2RoleEnded && (
@@ -1065,11 +1082,10 @@ export const EditorManuscriptDetails: React.FC = () => {
                         {rev.reviewerName}
                       </span>
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${
-                          rev.stage === 2
-                            ? 'bg-purple-50 text-purple-800 border-purple-200'
-                            : 'bg-blue-50 text-blue-800 border-blue-200'
-                        }`}
+                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${rev.stage === 2
+                          ? 'bg-purple-50 text-purple-800 border-purple-200'
+                          : 'bg-blue-50 text-blue-800 border-blue-200'
+                          }`}
                       >
                         {rev.stageName || (rev.stage === 2 ? 'Stage 2: Final Evaluation' : 'Stage 1: Initial Assessment')}
                       </span>
@@ -1080,13 +1096,12 @@ export const EditorManuscriptDetails: React.FC = () => {
                   </div>
 
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      rev.recommendation === 'Accept'
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                        : rev.recommendation === 'Reject'
+                    className={`px-3 py-1 rounded-full text-xs font-bold ${rev.recommendation === 'Accept'
+                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                      : rev.recommendation === 'Reject'
                         ? 'bg-rose-50 text-rose-800 border border-rose-200'
                         : 'bg-amber-50 text-amber-800 border border-amber-200'
-                    }`}
+                      }`}
                   >
                     Recommendation: {rev.recommendation}
                   </span>
@@ -1160,13 +1175,13 @@ export const EditorManuscriptDetails: React.FC = () => {
                             const criterionName = SRMU_CRITERIA[sIdx] || `Criterion ${sIdx + 1}`;
                             const ratingLabel =
                               score === 5 ? 'Excellent' :
-                              score === 4 ? 'Good' :
-                              score === 3 ? 'Satisfactory' :
-                              score === 2 ? 'Marginal' : 'Deficient';
+                                score === 4 ? 'Good' :
+                                  score === 3 ? 'Satisfactory' :
+                                    score === 2 ? 'Marginal' : 'Deficient';
                             const badgeStyle =
                               score >= 4 ? 'bg-emerald-50 text-emerald-800 border-emerald-200' :
-                              score === 3 ? 'bg-blue-50 text-blue-800 border-blue-200' :
-                              'bg-rose-50 text-rose-800 border-rose-200';
+                                score === 3 ? 'bg-blue-50 text-blue-800 border-blue-200' :
+                                  'bg-rose-50 text-rose-800 border-rose-200';
 
                             return (
                               <tr key={sIdx} className="hover:bg-white/70 transition-colors">
@@ -1242,26 +1257,91 @@ export const EditorManuscriptDetails: React.FC = () => {
       {/* Tab 3: History */}
       {activeTab === 'history' && (
         <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs space-y-4">
-          <h3 className="text-sm font-bold text-slate-900">Workflow Event Audit Trail</h3>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Workflow Event Audit Trail &amp; Submission History</h3>
+              <p className="text-[11px] text-slate-500">
+                Complete archive of all initial and revised submissions with attached documents and editorial decisions.
+              </p>
+            </div>
+            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600">
+              Audit Trail
+            </span>
+          </div>
+
           <div className="space-y-3">
             {manuscript.history
               .slice()
               .reverse()
-              .map((evt) => (
-                <div key={evt.id} className="flex items-start gap-3 text-xs">
-                  <div className="w-2 h-2 rounded-full bg-indigo-600 mt-1.5 shrink-0" />
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">{evt.actor}</span>
+              .map((evt, idx) => {
+                const isRevisionSubmitted = evt.status === 'Revision Submitted' || evt.comment?.toLowerCase().includes('revision');
+                const isInitialSubmitted = evt.status === 'Submitted' || evt.comment?.toLowerCase().includes('initial manuscript');
+
+                // Match revision file for revision events
+                let matchedFile: { name: string; url?: string; version?: number } | null = null;
+                if (isRevisionSubmitted && manuscript.revisedFiles && manuscript.revisedFiles.length > 0) {
+                  const found = manuscript.revisedFiles.find(
+                    (rf) => evt.comment?.includes(rf.name) || (rf.version && evt.comment?.includes(`v${rf.version}`))
+                  );
+                  if (found) {
+                    matchedFile = found;
+                  } else {
+                    const revEvents = manuscript.history.filter(h => h.status === 'Revision Submitted' || h.comment?.toLowerCase().includes('revision'));
+                    const revIdx = revEvents.findIndex(h => h.id === evt.id);
+                    if (revIdx >= 0 && revIdx < manuscript.revisedFiles.length) {
+                      matchedFile = manuscript.revisedFiles[revIdx];
+                    }
+                  }
+                } else if (isInitialSubmitted && manuscript.file) {
+                  matchedFile = manuscript.file;
+                }
+
+                return (
+                  <div key={evt.id || idx} className="p-3.5 bg-slate-50/60 border border-slate-200/80 rounded-xl space-y-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${isRevisionSubmitted ? 'bg-amber-500' : isInitialSubmitted ? 'bg-indigo-600' : 'bg-slate-400'}`} />
+                        <span className="font-bold text-slate-900">{evt.actor}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 font-bold text-slate-700">
+                          {evt.role}
+                        </span>
+                        {isRevisionSubmitted && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 font-bold text-amber-900 border border-amber-200">
+                            Revision Submission
+                          </span>
+                        )}
+                        {isInitialSubmitted && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-100 font-bold text-blue-900 border border-blue-200">
+                            Initial Submission
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] text-slate-400 font-mono">{evt.date}</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 font-bold text-slate-600">
-                        {evt.role}
-                      </span>
                     </div>
-                    <p className="text-slate-600">{evt.comment}</p>
+
+                    <p className="text-slate-700 leading-relaxed">{evt.comment}</p>
+
+                    {matchedFile && (
+                      <div className="mt-1.5 p-2.5 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 max-w-lg shadow-2xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-indigo-700 shrink-0" />
+                          <span className="font-mono text-[11px] text-slate-800 truncate font-semibold">
+                            {matchedFile.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => downloadManuscriptFile(matchedFile!.url || matchedFile!.name, matchedFile!.name)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0d3b6e] hover:bg-[#092b52] text-white rounded-md font-bold text-[10px] shrink-0 cursor-pointer transition-colors"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span>Download Document</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
       )}

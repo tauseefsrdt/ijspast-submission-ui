@@ -47,6 +47,7 @@ export const AuthorManuscriptDetails: React.FC = () => {
   const modalFileInputRef = useRef<HTMLInputElement>(null);
 
   const manuscript = manuscripts.find((m) => m.id === id);
+  const nextRevisionRound = (manuscript?.revisedFiles?.length || 0) + 2;
 
   useEffect(() => {
     if (id && (!manuscript || manuscript.id !== id)) {
@@ -66,8 +67,8 @@ export const AuthorManuscriptDetails: React.FC = () => {
         file,
         authorName: user.name,
       })
-    );
-    dispatch(fetchManuscriptById(manuscript.id));
+    ).unwrap();
+    await dispatch(fetchManuscriptById(manuscript.id));
     setActiveTab('details');
   };
 
@@ -179,7 +180,7 @@ export const AuthorManuscriptDetails: React.FC = () => {
           </div>
 
           {/* Quick Status Action Banner & Upload Options */}
-          <div className="flex flex-col gap-2 shrink-0 md:w-72">
+          {/* <div className="flex flex-col gap-2 shrink-0 md:w-72">
             {['Revision Requested', 'Revision Submitted', 'Under Review', 'Editor Assessment'].includes(
               manuscript.status
             ) && (
@@ -223,7 +224,7 @@ export const AuthorManuscriptDetails: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -233,22 +234,20 @@ export const AuthorManuscriptDetails: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('details')}
-            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors ${
-              activeTab === 'details'
-                ? 'border-[#0d3b6e] text-[#0d3b6e]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors ${activeTab === 'details'
+              ? 'border-[#0d3b6e] text-[#0d3b6e]'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
           >
             Manuscript Metadata &amp; Abstract
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('files')}
-            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5 ${
-              activeTab === 'files'
-                ? 'border-[#0d3b6e] text-[#0d3b6e]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5 ${activeTab === 'files'
+              ? 'border-[#0d3b6e] text-[#0d3b6e]'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
           >
             <span>Attached Files</span>
             <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-100 font-bold">
@@ -258,11 +257,10 @@ export const AuthorManuscriptDetails: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('feedback')}
-            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5 ${
-              activeTab === 'feedback'
-                ? 'border-[#0d3b6e] text-[#0d3b6e]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5 ${activeTab === 'feedback'
+              ? 'border-[#0d3b6e] text-[#0d3b6e]'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
           >
             <span>Review &amp; Editorial Decisions</span>
             {manuscript.status === 'Revision Requested' && (
@@ -272,11 +270,10 @@ export const AuthorManuscriptDetails: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('communications')}
-            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5 ${
-              activeTab === 'communications'
-                ? 'border-[#0d3b6e] text-[#0d3b6e]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5 ${activeTab === 'communications'
+              ? 'border-[#0d3b6e] text-[#0d3b6e]'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
           >
             <MessageSquare className="w-3.5 h-3.5" />
             <span>Editor Communications</span>
@@ -289,11 +286,10 @@ export const AuthorManuscriptDetails: React.FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab('history')}
-            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors ${
-              activeTab === 'history'
-                ? 'border-[#0d3b6e] text-[#0d3b6e]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            className={`py-3 px-1 border-b-2 font-bold text-xs cursor-pointer transition-colors ${activeTab === 'history'
+              ? 'border-[#0d3b6e] text-[#0d3b6e]'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
           >
             Status History Trail
           </button>
@@ -373,15 +369,15 @@ export const AuthorManuscriptDetails: React.FC = () => {
             {['Revision Requested', 'Revision Submitted', 'Under Review', 'Editor Assessment'].includes(
               manuscript.status
             ) && (
-              <button
-                type="button"
-                onClick={() => setIsUploadModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>Upload New Version</span>
-              </button>
-            )}
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>Upload New Version</span>
+                </button>
+              )}
           </div>
           <table className="w-full text-left text-xs border-collapse">
             <thead>
@@ -437,6 +433,9 @@ export const AuthorManuscriptDetails: React.FC = () => {
           {manuscript.status === 'Revision Requested' && (
             <RevisionForm
               manuscriptId={manuscript.id}
+              manuscriptTitle={manuscript.title}
+              manuscriptDomain={manuscript.domain}
+              revisionRound={nextRevisionRound}
               revisionRequestComments={manuscript.revisionRequestComments}
               editorComments={manuscript.editorComments}
               onSubmit={handleRevisionSubmit}
@@ -505,7 +504,7 @@ export const AuthorManuscriptDetails: React.FC = () => {
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow-2xs cursor-pointer transition-colors"
                 >
                   <UploadCloud className="w-3.5 h-3.5" />
-                  <span>Upload Further Revisions</span>
+                  <span>Submit Further Revision (Round v{nextRevisionRound})</span>
                 </button>
               </div>
               <p className="text-amber-900 leading-relaxed">
@@ -523,16 +522,16 @@ export const AuthorManuscriptDetails: React.FC = () => {
           {['Submitted', 'Editor Assessment', 'Under Review', 'Review Completed'].includes(
             manuscript.status
           ) && (
-            <div className="p-6 bg-white border border-slate-200 rounded-2xl text-center text-xs text-slate-500 space-y-2">
-              <Clock className="w-6 h-6 text-slate-400 mx-auto" />
-              <p className="font-bold text-slate-800">
-                Manuscript is under active editorial and peer review assessment ({manuscript.status})
-              </p>
-              <p>
-                You will be notified once reviewers submit their evaluation reports and the Editor-in-Chief formulates a formal decision.
-              </p>
-            </div>
-          )}
+              <div className="p-6 bg-white border border-slate-200 rounded-2xl text-center text-xs text-slate-500 space-y-2">
+                <Clock className="w-6 h-6 text-slate-400 mx-auto" />
+                <p className="font-bold text-slate-800">
+                  Manuscript is under active editorial and peer review assessment ({manuscript.status})
+                </p>
+                <p>
+                  You will be notified once reviewers submit their evaluation reports and the Editor-in-Chief formulates a formal decision.
+                </p>
+              </div>
+            )}
         </div>
       )}
 
@@ -542,23 +541,23 @@ export const AuthorManuscriptDetails: React.FC = () => {
           {['Revision Requested', 'Revision Submitted', 'Under Review', 'Editor Assessment'].includes(
             manuscript.status
           ) && (
-            <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-2 text-blue-900">
-                <UploadCloud className="w-4 h-4 text-[#0d3b6e] shrink-0" />
-                <span>
-                  <strong>Need to submit updated files?</strong> You can attach your revised document directly into a message below, or use the dedicated upload button.
-                </span>
+              <div className="p-3.5 bg-blue-50/80 border border-blue-200 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-blue-900">
+                  <UploadCloud className="w-4 h-4 text-[#0d3b6e] shrink-0" />
+                  <span>
+                    <strong>Need to submit updated files?</strong> You can attach your revised document directly into a message below, or use the dedicated upload button.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-2xs cursor-pointer transition-colors shrink-0"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  <span>Upload Revised File</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsUploadModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-2xs cursor-pointer transition-colors shrink-0"
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>Upload Revised File</span>
-              </button>
-            </div>
-          )}
+            )}
 
           <EditorAuthorChat
             manuscriptId={manuscript.id}
@@ -601,145 +600,97 @@ export const AuthorManuscriptDetails: React.FC = () => {
               })
               .slice()
               .reverse()
-              .map((evt) => (
-                <div key={evt.id} className="flex items-start gap-3 text-xs">
-                  <div className="w-2 h-2 rounded-full bg-indigo-600 mt-1.5 shrink-0" />
-                  <div className="space-y-0.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900">{evt.actor}</span>
+              .map((evt, idx) => {
+                const isRevisionSubmitted = evt.status === 'Revision Submitted' || evt.comment?.toLowerCase().includes('revision');
+                const isInitialSubmitted = evt.status === 'Submitted' || evt.comment?.toLowerCase().includes('initial manuscript');
+
+                // Match revision file for revision events
+                let matchedFile: { name: string; url?: string; version?: number } | null = null;
+                if (isRevisionSubmitted && manuscript.revisedFiles && manuscript.revisedFiles.length > 0) {
+                  const found = manuscript.revisedFiles.find(
+                    (rf) => evt.comment?.includes(rf.name) || (rf.version && evt.comment?.includes(`v${rf.version}`))
+                  );
+                  if (found) {
+                    matchedFile = found;
+                  } else {
+                    const revEvents = (manuscript.history || []).filter(h => h.status === 'Revision Submitted' || h.comment?.toLowerCase().includes('revision'));
+                    const revIdx = revEvents.findIndex(h => h.id === evt.id);
+                    if (revIdx >= 0 && revIdx < manuscript.revisedFiles.length) {
+                      matchedFile = manuscript.revisedFiles[revIdx];
+                    }
+                  }
+                } else if (isInitialSubmitted && manuscript.file) {
+                  matchedFile = manuscript.file;
+                }
+
+                return (
+                  <div key={evt.id || idx} className="p-3.5 bg-slate-50/60 border border-slate-200/80 rounded-xl space-y-2 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${isRevisionSubmitted ? 'bg-amber-500' : isInitialSubmitted ? 'bg-indigo-600' : 'bg-slate-400'}`} />
+                        <span className="font-bold text-slate-900">{evt.actor}</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 font-bold text-slate-700">
+                          {evt.role}
+                        </span>
+                        {isRevisionSubmitted && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 font-bold text-amber-900 border border-amber-200">
+                            Revision Submission
+                          </span>
+                        )}
+                        {isInitialSubmitted && (
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-100 font-bold text-blue-900 border border-blue-200">
+                            Initial Submission
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] text-slate-400 font-mono">{evt.date}</span>
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 font-bold text-slate-600">
-                        {evt.role}
-                      </span>
                     </div>
-                    <p className="text-slate-600">{evt.comment}</p>
+
+                    <p className="text-slate-700 leading-relaxed">{evt.comment}</p>
+
+                    {matchedFile && (
+                      <div className="mt-1.5 p-2 bg-white border border-slate-200 rounded-lg flex items-center justify-between gap-3 max-w-lg shadow-2xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-4 h-4 text-indigo-700 shrink-0" />
+                          <span className="font-mono text-[11px] text-slate-800 truncate font-semibold">
+                            {matchedFile.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => downloadManuscriptFile(matchedFile!.url || matchedFile!.name, matchedFile!.name)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#0d3b6e] hover:bg-[#092b52] text-white rounded-md font-bold text-[10px] shrink-0 cursor-pointer transition-colors"
+                        >
+                          <Download className="w-3 h-3" />
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
         </div>
       )}
 
-      {/* Upload Revised Manuscript Modal */}
+      {/* Dedicated Revision Submission Form Modal */}
       {isUploadModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
-            {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-[#0d3b6e]/10 text-[#0d3b6e] flex items-center justify-center font-bold">
-                  <UploadCloud className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-sm">Upload Revised Manuscript</h3>
-                  <p className="text-[11px] text-slate-500">Attach updated document with your modifications</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsUploadModalOpen(false);
-                  setModalFile(null);
-                  setModalResponse('');
-                }}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleModalUploadSubmit} className="p-6 space-y-4">
-              {/* File Upload Zone */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Revised Document File <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="file"
-                  ref={modalFileInputRef}
-                  onChange={handleModalFileSelect}
-                  accept=".pdf,.doc,.docx"
-                  className="hidden"
-                />
-
-                {modalFile ? (
-                  <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs">
-                    <div className="flex items-center gap-2.5 overflow-hidden">
-                      <FileText className="w-5 h-5 text-[#0d3b6e] shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-bold text-blue-950 truncate">{modalFile.name}</p>
-                        <p className="text-[10px] text-blue-700 font-mono">
-                          {(modalFile.size / 1024).toFixed(1)} KB • {modalFile.type}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setModalFile(null);
-                        if (modalFileInputRef.current) modalFileInputRef.current.value = '';
-                      }}
-                      className="p-1 hover:bg-blue-100 rounded-lg text-blue-700 cursor-pointer"
-                      title="Remove file"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => modalFileInputRef.current?.click()}
-                    className="border-2 border-dashed border-slate-300 hover:border-[#0d3b6e] rounded-xl p-6 text-center cursor-pointer bg-slate-50 hover:bg-blue-50/40 transition-colors"
-                  >
-                    <Upload className="w-7 h-7 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-slate-700">
-                      Click to select revised document
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      PDF, DOC, or DOCX (maximum 50 MB)
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Author Notes / Changes Summary */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1.5">
-                  Summary of Changes / Response to Editor (Optional)
-                </label>
-                <textarea
-                  rows={3}
-                  value={modalResponse}
-                  onChange={(e) => setModalResponse(e.target.value)}
-                  placeholder="Describe the changes made in this version (e.g., corrected heading sizes, revised figures, updated references)..."
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#0d3b6e]/20 leading-relaxed font-sans"
-                />
-              </div>
-
-              {/* Modal Actions */}
-              <div className="pt-2 flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsUploadModalOpen(false);
-                    setModalFile(null);
-                    setModalResponse('');
-                  }}
-                  disabled={isSubmittingRevision}
-                  className="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-50 cursor-pointer transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={!modalFile || isSubmittingRevision}
-                  className="px-5 py-2 bg-[#0d3b6e] hover:bg-[#092b52] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5 transition-colors"
-                >
-                  <UploadCloud className="w-3.5 h-3.5" />
-                  <span>{isSubmittingRevision ? 'Uploading...' : 'Submit Revised Version'}</span>
-                </button>
-              </div>
-            </form>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto">
+          <div className="w-full max-w-2xl my-8">
+            <RevisionForm
+              manuscriptId={manuscript.id}
+              manuscriptTitle={manuscript.title}
+              manuscriptDomain={manuscript.domain}
+              revisionRound={nextRevisionRound}
+              revisionRequestComments={manuscript.revisionRequestComments}
+              editorComments={manuscript.editorComments}
+              onSubmit={async (response, file) => {
+                await handleRevisionSubmit(response, file);
+                setIsUploadModalOpen(false);
+              }}
+              isLoading={isLoading}
+              onCancel={() => setIsUploadModalOpen(false)}
+            />
           </div>
         </div>
       )}

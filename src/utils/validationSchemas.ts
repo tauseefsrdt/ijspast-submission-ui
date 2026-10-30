@@ -89,6 +89,7 @@ export const activateAccountSchema = Yup.object().shape({
 export const submissionSchema = Yup.object().shape({
   name: Yup.string().trim().required('Corresponding author full name is required'),
   email: Yup.string().trim().email('Valid institutional email is required').required('Author email is required'),
+  phone: Yup.string().trim(),
   institution: Yup.string().trim().required('Institution or university is required'),
   department: Yup.string().trim(),
   cityCountry: Yup.string().trim().required('City and country is required'),
@@ -103,11 +104,11 @@ export const submissionSchema = Yup.object().shape({
     .required('Abstract is required')
     .test(
       'abstract-word-count',
-      'Abstract must be between 150 and 250 words',
+      'Abstract must be between 50 and 250 words',
       (val) => {
         if (!val) return false;
         const count = countWords(val);
-        return count >= 150 && count <= 250;
+        return count >= 50 && count <= 250;
       }
     ),
   keywords: Yup.string()

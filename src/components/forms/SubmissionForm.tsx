@@ -20,6 +20,7 @@ interface SubmissionFormProps {
   initialAuthor?: {
     name?: string;
     email?: string;
+    phone?: string;
     institution?: string;
     department?: string;
   };
@@ -56,6 +57,7 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
     initialValues: {
       name: initialAuthor?.name || '',
       email: initialAuthor?.email || '',
+      phone: initialAuthor?.phone || '',
       institution: initialAuthor?.institution || '',
       department: initialAuthor?.department || '',
       cityCountry: '',
@@ -84,6 +86,7 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
           author: {
             name: values.name.trim(),
             email: values.email.trim(),
+            phone: values.phone?.trim() || undefined,
             institution: values.institution.trim(),
             department: values.department.trim(),
             cityCountry: values.cityCountry.trim(),
@@ -260,7 +263,7 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
 
           <div>
             <FormTextarea
-              label="Abstract (150–250 words)"
+              label="Abstract (50–250 words)"
               required
               rows={5}
               id="abstract"
@@ -273,15 +276,14 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
               touched={formik.touched.abstract}
               counterBadge={
                 <span
-                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                    wordCount >= 150 && wordCount <= 250
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                      : wordCount > 250
+                  className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${wordCount >= 50 && wordCount <= 250
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : wordCount > 250
                       ? 'bg-rose-50 text-rose-700 border border-rose-200'
                       : 'bg-slate-100 text-slate-600'
-                  }`}
+                    }`}
                 >
-                  {wordCount} words (Target: 150–250)
+                  {wordCount} words (Target: 50–250)
                 </span>
               }
             />
@@ -302,11 +304,10 @@ export const SubmissionForm: React.FC<SubmissionFormProps> = ({
               helperText="Separate keywords with commas (Target: 4–8)"
               rightElement={
                 <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    keywordCount >= 4 && keywordCount <= 8
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-slate-100 text-slate-500'
-                  }`}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${keywordCount >= 4 && keywordCount <= 8
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'bg-slate-100 text-slate-500'
+                    }`}
                 >
                   {keywordCount}
                 </span>

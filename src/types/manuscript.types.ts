@@ -14,6 +14,7 @@ export type ManuscriptStatus =
 export interface AuthorInfo {
   name: string;
   email: string;
+  phone?: string;
   institution: string;
   department?: string;
   cityCountry: string;

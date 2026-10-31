@@ -1,4 +1,5 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
+import axios from 'axios';
 import { axiosInstance, API_BASE_URL } from '../../interceptors/axiosInterceptor';
 import {
   Manuscript,
@@ -361,30 +362,49 @@ export const publishManuscriptThunk = createAsyncThunk(
 
 // Binary file download helper function
 export const downloadManuscriptFile = async (fileIdOrUrl: string, fileName?: string): Promise<void> => {
-  let downloadUrl = fileIdOrUrl;
-  if (!fileIdOrUrl.startsWith('http') && !fileIdOrUrl.startsWith('/api')) {
-    downloadUrl = `/files/${fileIdOrUrl}/download`;
+  // Build the absolute download URL
+  let absoluteUrl: string;
+  if (fileIdOrUrl.startsWith('http')) {
+    // Already a full URL (e.g. http://localhost:8080/api/v1/files/{id}/download)
+    absoluteUrl = fileIdOrUrl;
   } else if (fileIdOrUrl.startsWith('/api/v1')) {
-    downloadUrl = fileIdOrUrl.replace('/api/v1', '');
+    // Relative path with /api/v1 prefix — prepend the host origin
+    absoluteUrl = `${window.location.origin}${fileIdOrUrl}`;
+  } else if (fileIdOrUrl.startsWith('/')) {
+    // Relative path without prefix — append to API base
+    absoluteUrl = `${API_BASE_URL}${fileIdOrUrl}`;
+  } else {
+    // Plain file ID — build the standard download endpoint
+    absoluteUrl = `${API_BASE_URL}/files/${fileIdOrUrl}/download`;
   }
 
+  // Read JWT token from session storage
+  let token: string | null = null;
   try {
-    const response = await axiosInstance.get(downloadUrl, {
-      responseType: 'blob',
-    });
-    const blob = new Blob([response as any]);
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName || 'manuscript-document.pdf';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('File download failed, attempting window open fallback:', err);
-    window.open(`${API_BASE_URL}${downloadUrl}`, '_blank');
+    const sessionStr = localStorage.getItem('ijspast_session_v2');
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      token = session?.token || null;
+    }
+  } catch {
+    // ignore parse errors
   }
+
+  // Use raw axios (not the intercepted instance) so responseType: 'blob' is preserved
+  const response = await axios.get(absoluteUrl, {
+    responseType: 'blob',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+
+  const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' });
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = blobUrl;
+  link.download = fileName || 'manuscript-document.pdf';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(blobUrl);
 };
 
 export const getAuthorsTable = async (): Promise<any[]> => {

@@ -45,6 +45,9 @@ export const PublishedPapersPage: React.FC = () => {
     try {
       toast.info(`Downloading publication: ${fileName}`);
       await downloadManuscriptFile(fileUrl, fileName);
+    } catch (err: any) {
+      console.error('Download failed:', err);
+      toast.error(err?.message || 'Download failed. Please try again.');
     } finally {
       setDownloadingId(null);
     }
